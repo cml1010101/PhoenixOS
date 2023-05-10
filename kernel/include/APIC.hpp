@@ -32,6 +32,7 @@ class LAPICTimer : public Timer
 private:
     LAPIC& lapic;
     size_t frequency, count;
+    TimerHandler handler;
 public:
     LAPICTimer(LAPIC& lapic);
     void start() override;
@@ -40,6 +41,6 @@ public:
     size_t getCount() override;
     size_t getFrequency() override;
     double getNanoseconds() override;
-    void setHandler()
+    void setInterruptTimer(TimerHandler handler) override;
 };
 #endif
