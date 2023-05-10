@@ -171,3 +171,19 @@ extern "C" void free(void* ptr)
 {
     Heap::getCurrentHeap()->free(ptr);
 }
+void* operator new(size_t size)
+{
+    return Heap::getCurrentHeap()->allocate(size);
+}
+void* operator new[](size_t size)
+{
+    return Heap::getCurrentHeap()->allocate(size);
+}
+void operator delete(void* ptr)
+{
+    Heap::getCurrentHeap()->free(ptr);
+}
+void operator delete[](void* ptr)
+{
+    Heap::getCurrentHeap()->free(ptr);
+}
