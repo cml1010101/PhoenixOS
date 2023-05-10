@@ -53,6 +53,11 @@ IOAPIC::IOAPIC(uint32_t* address)
         (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), (uint64_t)registers,
         VMM_PRESENT | VMM_CACHE_DISABLE);
 }
+void IOAPIC::setRedirection(size_t number, uint64_t destination, uint64_t vector)
+{
+    writeRegister(number * 2 + 0x10, vector);
+    writeRegister(number * 2 + 0x11, destination << 24);
+}
 LAPICTimer::LAPICTimer(LAPIC& lapic) : lapic(lapic)
 {
     frequency = 0;

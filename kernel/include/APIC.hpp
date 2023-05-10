@@ -22,10 +22,21 @@ public:
 class IOAPIC
 {
 private:
-    uint32_t* registers;
+    volatile uint32_t* registers;
+    inline void writeRegister(uint32_t reg, uint32_t val)
+    {
+        registers[0] = reg;
+        registers[4] = val;
+    }
+    inline uint32_t readRegister(uint32_t reg)
+    {
+        registers[0] = reg;
+        return registers[4];
+    }
 public:
     IOAPIC() = default;
     IOAPIC(uint32_t* registers);
+    void setRedirection(uint64_t number, uint64_t destination, uint64_t vector);
 };
 class LAPICTimer : public Timer
 {
@@ -41,6 +52,6 @@ public:
     size_t getCount() override;
     size_t getFrequency() override;
     double getNanoseconds() override;
-    void setInterruptTimer(TimerHandler handler) override;
+    void setInterruptHandler(TimerHandler handler) override;
 };
 #endif
