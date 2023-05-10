@@ -28,6 +28,10 @@ public:
     size_t getFrequency() override;
     double getNanoseconds() override;
     void setInterruptHandler(TimerHandler handler) override;
+    inline InterruptHandler getHandler()
+    {
+        return handler;
+    }
     static inline PIT* getInstance()
     {
         return instance;

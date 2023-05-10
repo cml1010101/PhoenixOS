@@ -15,6 +15,7 @@ void PIT::start()
         count = 0;
         CPU::getInstance()->getCurrentCore().setInterruptHandler(0, [](CPURegisters* regs) {
             getInstance()->incrementCount();
+            if (getInstance()->getHandler()) getInstance()->getHandler()(regs);
         });
         CPU::getInstance()->getIOAPIC().setRedirection(0, LAPIC::getLAPIC().getID(), 32);
     }
