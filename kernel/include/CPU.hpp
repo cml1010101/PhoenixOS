@@ -62,6 +62,10 @@ public:
     bool supportsAPIC();
     Core& getCore(size_t i);
     Core& getCurrentCore();
+    inline IOAPIC& getIOAPIC()
+    {
+        return apic;
+    }
     static inline void initialize()
     {
         instance = (CPU*)VirtualMemoryManager::getCurrentVirtualMemoryManager()->allocate(1);
