@@ -21,7 +21,7 @@ LAPIC::LAPIC(uint32_t* registers)
 {
     VirtualMemoryManager::getKernelVirtualMemoryManager()->mapPage((uint64_t)(this->registers =
         (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), (uint64_t)registers,
-        VMM_PRESENT | VMM_CACHE_DISABLE);
+        VMM_PRESENT | VMM_READ_WRITE | VMM_CACHE_DISABLE);
 }
 void LAPIC::enable()
 {
@@ -51,12 +51,16 @@ IOAPIC::IOAPIC(uint32_t* address)
 {
     VirtualMemoryManager::getKernelVirtualMemoryManager()->mapPage((uint64_t)(this->registers =
         (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), (uint64_t)registers,
-        VMM_PRESENT | VMM_CACHE_DISABLE);
+        VMM_PRESENT | VMM_READ_WRITE | VMM_CACHE_DISABLE);
 }
 void IOAPIC::setRedirection(size_t number, uint64_t destination, uint64_t vector)
 {
     writeRegister(number * 2 + 0x10, vector);
     writeRegister(number * 2 + 0x11, destination << 24);
+}
+void IOAPIC::disableRedirection(size_t number)
+{
+    writeRegister(number * 2 + 0x10, 1 << 16);
 }
 LAPICTimer::LAPICTimer(LAPIC& lapic) : lapic(lapic)
 {

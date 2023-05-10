@@ -37,6 +37,7 @@ public:
     IOAPIC() = default;
     IOAPIC(uint32_t* registers);
     void setRedirection(uint64_t number, uint64_t destination, uint64_t vector);
+    void disableRedirection(uint64_t number);
 };
 class LAPICTimer : public Timer
 {
