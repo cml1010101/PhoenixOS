@@ -2,10 +2,35 @@
 #define APIC_HPP
 #include <PhoenixOS.hpp>
 #include <Timer.hpp>
+class LAPICTimer : public Timer
+{
+private:
+    LAPIC* lapic;
+    size_t frequency, count;
+    TimerHandler handler;
+public:
+    LAPICTimer(LAPIC* lapic);
+    void start() override;
+    void stop() override;
+    void setFrequency(size_t frequency);
+    size_t getCount() override;
+    inline void incrementCount()
+    {
+        count++;
+    }
+    size_t getFrequency() override;
+    double getMicroseconds() override;
+    void setInterruptHandler(TimerHandler handler) override;
+    inline TimerHandler getInterruptHandler()
+    {
+        return handler;
+    }
+};
 class LAPIC
 {
 private:
     friend class LAPICTimer;
+    LAPICTimer timer;
     uint32_t* registers;
     void writeRegister(uint64_t reg, uint32_t val);
     uint32_t readRegister(uint64_t reg);
@@ -16,7 +41,10 @@ public:
     void sendEOI();
     size_t getID();
     void sendIPI(uint8_t destination, uint32_t dsh, uint32_t type, uint8_t vector);
-    Timer* getTimer();
+    inline LAPICTimer* getTimer()
+    {
+        return &timer;
+    }
     static LAPIC getLAPIC();
 };
 class IOAPIC
@@ -38,21 +66,5 @@ public:
     IOAPIC(uint32_t* registers);
     void setRedirection(uint64_t number, uint64_t destination, uint64_t vector);
     void disableRedirection(uint64_t number);
-};
-class LAPICTimer : public Timer
-{
-private:
-    LAPIC& lapic;
-    size_t frequency, count;
-    TimerHandler handler;
-public:
-    LAPICTimer(LAPIC& lapic);
-    void start() override;
-    void stop() override;
-    void setFrequency(size_t frequency);
-    size_t getCount() override;
-    size_t getFrequency() override;
-    double getNanoseconds() override;
-    void setInterruptHandler(TimerHandler handler) override;
 };
 #endif

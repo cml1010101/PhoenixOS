@@ -10,7 +10,7 @@ public:
     virtual void stop() = 0;
     virtual size_t getCount() = 0;
     virtual size_t getFrequency() = 0;
-    virtual double getNanoseconds() = 0;
+    virtual double getMicroseconds() = 0;
     virtual void setInterruptHandler(TimerHandler handler) = 0;
 };
 #endif

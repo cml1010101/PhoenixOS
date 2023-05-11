@@ -49,6 +49,8 @@ extern "C" void irq12();
 extern "C" void irq13();
 extern "C" void irq14();
 extern "C" void irq15();
+extern "C" void int254();
+extern "C" void int255();
 extern "C" void load_idt(SystemPointer* ptr);
 IDTEntry::IDTEntry()
 {
@@ -131,6 +133,8 @@ IDT::IDT(bool unused)
     entries[45] = IDTEntry((uint64_t)irq13, 0x8, 0b1110, 0, 0);
     entries[46] = IDTEntry((uint64_t)irq14, 0x8, 0b1110, 0, 0);
     entries[47] = IDTEntry((uint64_t)irq15, 0x8, 0b1110, 0, 0);
+    entries[254] = IDTEntry((uint64_t)int254, 0x8, 0b1110, 0, 0);
+    entries[255] = IDTEntry((uint64_t)int255, 0x8, 0b1110, 0, 0);
 }
 void IDT::load()
 {

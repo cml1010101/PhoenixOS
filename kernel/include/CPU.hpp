@@ -6,6 +6,7 @@
 #include <APIC.hpp>
 #include <VirtualMemoryManager.hpp>
 #include <Scheduler.hpp>
+#include <PIT.hpp>
 #include "cpuid.h"
 typedef void(*InterruptHandler)(CPURegisters*);
 class CPU
@@ -36,13 +37,18 @@ public:
         void resetIDT();
         void initializeLAPIC(LAPIC lapic);
         void initializePIC();
-        void handleIRQ(CPURegisters* regs);
+        void handleInterrupt(CPURegisters* regs);
         void handleISR(CPURegisters* regs);
+        void schedule(CPURegisters* regs);
         inline void setInterruptHandler(size_t num, InterruptHandler handler)
         {
             handlers[num] = handler;
         }
         VirtualMemoryManager* getVirtualMemoryManager();
+        inline LAPIC& getLAPIC()
+        {
+            return lapic;
+        }
         inline bool isInitialized()
         {
             return initialized;
@@ -56,6 +62,7 @@ private:
     size_t numCores;
     Core cores[16];
     IOAPIC apic;
+    PIT pit;
     static CPU* instance;
 public:
     CPU();

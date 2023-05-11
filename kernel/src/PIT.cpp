@@ -24,9 +24,9 @@ void PIT::stop()
 {
     CPU::getInstance()->getIOAPIC().disableRedirection(0);
 }
-void PIT::sleep(uint64_t nanoseconds)
+void PIT::sleep(uint64_t microseconds)
 {
-    size_t target = count + nanoseconds * frequency / 1e9;
+    size_t target = count + microseconds * frequency / 1e6;
     while (count < target);
 }
 void PIT::setFrequency(uint64_t frequency)
@@ -41,9 +41,9 @@ uint64_t PIT::getFrequency()
 {
     return frequency;
 }
-double PIT::getNanoseconds()
+double PIT::getMicroseconds()
 {
-    return (double)count / frequency * 1e9;
+    return (double)count / frequency * 1e6;
 }
 void PIT::setInterruptHandler(InterruptHandler handler)
 {

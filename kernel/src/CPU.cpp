@@ -100,12 +100,11 @@ void CPU::Core::initializeLAPIC(LAPIC lapic)
     PIC::disable();
     lapic.enable();
 }
-void CPU::Core::handleIRQ(CPURegisters* regs)
+void CPU::Core::handleInterrupt(CPURegisters* regs)
 {
     if (CPU::getInstance()->supportsAPIC()) lapic.sendEOI();
-    else PIC::sendEOI(regs->num);
-    size_t intNum = regs->num + 32;
-    if (handlers[intNum]) handlers[intNum](regs);
+    else if (regs->num > 31 && regs->num < 48) PIC::sendEOI(regs->num);
+    if (handlers[regs->num]) handlers[regs->num](regs);
 }
 const char* isrMessages[] = {
     "Division By Zero",
@@ -173,6 +172,8 @@ CPU::CPU()
     cores[0].resetGDT();
     cores[0].initializeIDT();
     cores[0].resetIDT();
+    pit.setFrequency(1e5);
+    pit.start();
     uint32_t lapicIDs[32];
     if (supportsAPIC())
     {
@@ -234,11 +235,22 @@ extern "C" void core_initialization_routine(uint64_t id)
     core.initializeIDT();
     core.resetIDT();
     core.initializeLAPIC(LAPIC::getLAPIC());
+    core.getLAPIC().getTimer()->setFrequency(1e+5);
+    core.getLAPIC().getTimer()->start();
+    core.getLAPIC().getTimer()->setInterruptHandler(
+    [](CPURegisters* registers)
+    {
+        CPU::getInstance()->getCurrentCore().schedule(registers);
+    });
     core.setInitialized(true);
 }
 extern "C" void irq_handler(CPURegisters* regs)
 {
-    CPU::getInstance()->getCurrentCore().handleIRQ(regs);
+    CPU::getInstance()->getCurrentCore().handleInterrupt(regs);
+}
+extern "C" void int_handler(CPURegisters* regs)
+{
+    CPU::getInstance()->getCurrentCore().handleInterrupt(regs);
 }
 extern "C" void isr_handler(CPURegisters* regs)
 {

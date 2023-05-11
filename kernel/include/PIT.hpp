@@ -22,13 +22,13 @@ public:
     }
     void start() override;
     void stop() override;
-    void sleep(uint64_t nanoseconds);
+    void sleep(uint64_t microseconds);
     void setFrequency(size_t frequency);
     size_t getCount() override;
     size_t getFrequency() override;
-    double getNanoseconds() override;
+    double getMicroseconds() override;
     void setInterruptHandler(TimerHandler handler) override;
-    inline InterruptHandler getHandler()
+    inline TimerHandler getHandler()
     {
         return handler;
     }
