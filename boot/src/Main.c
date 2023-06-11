@@ -13,8 +13,9 @@ typedef struct
     void* memoryMap;
     size_t mapSize;
     size_t descriptorSize;
+    size_t magic;
 } BootData;
-typedef void(*KERNEL_MAIN)(BootData);
+typedef void(*KERNEL_MAIN)(BootData*);
 void __panic(EFI_STATUS code, int line)
 {
     CHAR16 codeStr[48];
@@ -137,14 +138,15 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     void* map;
     map = LibMemoryMap(&numEntries, &mapKey, &descriptorSize, &descriptorVersion);
     memoryMapSize = descriptorSize * numEntries;
-    Print(L"Entering kernel.\n");
+    Print(L"Entering kernel: 0x%x.\n", kernelMain);
     BootData data;
     data.gop = gop;
     data.acpi = acpi;
     data.memoryMap = map;
     data.mapSize = memoryMapSize;
     data.descriptorSize = descriptorSize;
+    data.magic = 0xDEADBEEFCAFE;
     status = uefi_call_wrapper(BS->ExitBootServices, 2, ImageHandle, mapKey);
-    kernelMain(data);
+    kernelMain(&data);
     return -1;
 }
