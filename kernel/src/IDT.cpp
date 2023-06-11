@@ -1,6 +1,7 @@
 #include <IDT.hpp>
 #include <VirtualMemoryManager.hpp>
 #include <PhysicalMemoryManager.hpp>
+#include <CPU.hpp>
 extern "C" void isr0();
 extern "C" void isr1();
 extern "C" void isr2();
@@ -80,8 +81,8 @@ IDTEntry::IDTEntry(uint64_t offset, uint16_t selector, uint8_t type, uint8_t dpl
 }
 IDT::IDT(bool unused)
 {
-    VirtualMemoryManager::getCurrentVirtualMemoryManager()->mapPage(
-        (uint64_t)(entries = (IDTEntry*)VirtualMemoryManager::getCurrentVirtualMemoryManager()->allocateAddress(1)),
+    CPU::getInstance()->getCurrentCore().getVirtualMemoryManager()->mapPage(
+        (uint64_t)(entries = (IDTEntry*)CPU::getInstance()->getCurrentCore().getVirtualMemoryManager()->allocateAddress(1)),
         PhysicalMemoryManager::instance.allocatePage(),
         VMM_PRESENT | VMM_READ_WRITE
     );
@@ -139,7 +140,7 @@ IDT::IDT(bool unused)
 void IDT::load()
 {
     SystemPointer address;
-    address.base = (uint64_t)VirtualMemoryManager::getCurrentVirtualMemoryManager()->getPhysicalAddress(entries);
+    address.base = (uint64_t)CPU::getInstance()->getCurrentCore().getVirtualMemoryManager()->getPhysicalAddress(entries);
     address.limit = (256 * sizeof(IDTEntry)) - 1;
     load_idt(&address);
 }

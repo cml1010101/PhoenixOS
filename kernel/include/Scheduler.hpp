@@ -1,18 +1,23 @@
 #ifndef SCHEDULER_HPP
 #define SCHEDULER_HPP
 #include <PhoenixOS.hpp>
+#include <VirtualMemoryManager.hpp>
+#include <Timer.hpp>
 class Thread
 {
 private:
     friend class Scheduler;
     CPURegisters registers;
     const char* name;
-    bool active, terminated;
+    bool active, terminated, joined, asleep, finished;
+    uint64_t sleepTarget;
+    Thread* joinTarget;
     uint8_t ringLevel;
     int threadIdx;
     VirtualMemoryManager* vmm;
+    Thread* next;
 public:
-    Thread(void(*entryPoint)());
+    Thread(const char* name, void(*entryPoint)(), uint8_t ring = 0);
     inline bool isActive()
     {
         return active;
@@ -21,7 +26,11 @@ public:
     {
         return terminated;
     }
-    void join();
+    void join(Thread* thread)
+    {
+        joinTarget = thread;
+        joined = true;
+    }
     inline const char* getName()
     {
         return name;
@@ -34,24 +43,43 @@ public:
     {
         return threadIdx;
     }
+    inline void kill()
+    {
+        finished = true;
+    }
 };
 class Scheduler
 {
 private:
-    LinkedList<Thread*> threads;
-    int activeThreadIdx;
-    size_t countsPerInterrupt;
+    Thread* queue;
+    Thread* activeThread;
+    size_t numActiveThreads;
+    Timer* clockTimer;
     static Thread* kernelThread;
 public:
     Scheduler() = default;
-    Scheduler(size_t frequency);
+    Scheduler(Timer* interruptTimer, Timer* clockTimer, bool kernel);
     inline Thread* getActiveThread()
     {
-        return (activeThreadIdx != -1) ? threads[activeThreadIdx] : NULL;
+        return activeThread;
     }
-    inline void schedule(Thread* thread)
+    inline size_t getNumberActiveThreads()
     {
-        threads.add(thread);
+        return numActiveThreads;
+    }
+    inline void scheduleLocal(Thread* thread)
+    {
+        if (queue == NULL) queue = thread;
+        else
+        {
+            while (queue->next)
+            {
+                queue = queue->next;
+            }
+            queue->next = thread;
+        }
+        thread->active = true;
+        numActiveThreads++;
     }
     void reportISR(CPURegisters* regs);
     void yield();
@@ -61,5 +89,6 @@ public:
     {
         return kernelThread;
     }
+    static void schedule(Thread* thread);
 };
 #endif

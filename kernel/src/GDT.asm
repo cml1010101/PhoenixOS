@@ -3,17 +3,17 @@ global load_gdt
 load_gdt:
     mov rax, [rsp + 8]
     push rbp
+    mov rbp, rsp
     mov rbx, rdi
     lgdt [rbx]
-    mov rbx, rsp
+    mov ss, rax
     push rax
-    push rbx
+    push rbp
     pushfq
     push rsi
     push qword .l
     iretq
 .l:
-    mov rbp, rsp
     mov gs, r9w
     mov es, r8w
     mov fs, cx

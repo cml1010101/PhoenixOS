@@ -17,8 +17,8 @@ private:
     static Heap* currentHeap;
 public:
     Heap() = default;
-    Heap(uint64_t pages);
-    Heap(uint64_t pages, VirtualMemoryManager* vmm);
+    Heap(uint64_t pages, bool kernel);
+    Heap(uint64_t pages, bool kernel, VirtualMemoryManager* vmm);
     static inline Heap* getKernelHeap()
     {
         return kernelHeap;
@@ -40,5 +40,6 @@ public:
     void free(void* ptr);
     void check();
     void clean();
+    static void initialize();
 };
 #endif

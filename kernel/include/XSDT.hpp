@@ -34,6 +34,7 @@ private:
 public:
     ACPIHeader* find(const char* name);
     static void loadXSDT(XSDP* xsdp);
+    static void setupPaging();
     static XSDT* getInstance();
 };
 #endif

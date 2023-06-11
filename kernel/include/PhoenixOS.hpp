@@ -1,13 +1,22 @@
 #ifndef PHOENIXOS_HPP
 #define PHOENIXOS_HPP
 #include <stddef.h>
-#include <stdint.h>
+typedef unsigned int uint32_t;
+typedef unsigned long uint64_t;
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned long uintptr_t;
+typedef void(*Runnable)();
 extern "C" void* malloc(size_t size);
 extern "C" void* realloc(void* ptr, size_t size);
 extern "C" void free(void* ptr);
 extern "C" void memset(void* dest, int val, size_t length);
 extern "C" void memcpy(void* dest, const void* src, size_t length);
 extern "C" int memcmp(const void* a, const void* b, size_t length);
+extern "C" const char* itoa(int n, int base);
+extern "C" const char* uitoa(uint32_t n, int base);
+extern "C" const char* ltoa(long n, int base);
+extern "C" const char* ultoa(size_t n, int base);
 inline uint8_t inb(uint16_t port)
 {
     uint8_t data;
@@ -52,14 +61,18 @@ struct CPURegisters
 };
 class Logger
 {
-private:
+protected:
     static Logger* instance;
 public:
-    virtual void log(const char* frmt, ...) = 0;
-    virtual void panic(const char* frmt, ...) = 0;
+    virtual void log(const char* frmt, ...) {}
+    virtual void panic(const char* frmt, ...) {}
     inline static Logger* getInstance()
     {
         return instance;
+    }
+    inline static void setInstance(Logger* logger)
+    {
+        instance = logger;
     }
 };
 class Spinlock
@@ -154,12 +167,14 @@ public:
 template<typename T>
 class LinkedList
 {
-private:
+public:
     struct LinkedListEntry
     {
         T t;
         LinkedListEntry* next;
-    }* firstEntry;
+    };
+private:
+    LinkedListEntry* firstEntry;
     size_t len;
 public:
     inline LinkedList()
@@ -254,6 +269,21 @@ public:
         return len;
     }
 };
+class FileSystem;
+class File
+{
+private:
+    friend class FileSystem;
+    void* handle;
+    FileSystem* fileSystem;
+    File(void* handle, FileSystem* fileSystem);
+public:
+    File() = default;
+    bool isFolder();
+    size_t getSize();
+    void read(void* dest, size_t length);
+    void write(const void* src, size_t length);
+};
 class FileSystem
 {
 protected:
@@ -273,30 +303,18 @@ protected:
 public:
     virtual File openFile(const char* path) = 0;
 };
-class File
+inline void* operator new(size_t, void* p) throw()
 {
-private:
-    friend class FileSystem;
-    void* handle;
-    FileSystem* fileSystem;
-    File(void* handle, FileSystem* fileSystem);
-public:
-    File() = default;
-    inline bool isFolder()
-    {
-        return fileSystem->isFolder(*this);
-    }
-    inline size_t getSize()
-    {
-        return fileSystem->getSize(*this);
-    }
-    inline void read(void* dest, size_t length)
-    {
-        fileSystem->read(*this, dest, length);
-    }
-    inline void write(const void* src, size_t length)
-    {
-        fileSystem->write(*this, src, length);
-    }
-};
+    return p;
+}
+inline void* operator new[](size_t, void* p) throw()
+{
+    return p;
+}
+inline void operator delete(void*, void*) throw()
+{
+}
+inline void operator delete[](void*, void*) throw()
+{
+}
 #endif

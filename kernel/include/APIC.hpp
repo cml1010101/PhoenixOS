@@ -2,6 +2,7 @@
 #define APIC_HPP
 #include <PhoenixOS.hpp>
 #include <Timer.hpp>
+class LAPIC;
 class LAPICTimer : public Timer
 {
 private:
@@ -9,6 +10,7 @@ private:
     size_t frequency, count;
     TimerHandler handler;
 public:
+    LAPICTimer() = default;
     LAPICTimer(LAPIC* lapic);
     void start() override;
     void stop() override;
@@ -31,12 +33,12 @@ class LAPIC
 private:
     friend class LAPICTimer;
     LAPICTimer timer;
-    uint32_t* registers;
-    void writeRegister(uint64_t reg, uint32_t val);
-    uint32_t readRegister(uint64_t reg);
+    static uint32_t* registers;
+    static void writeRegister(uint64_t reg, uint32_t val);
+    static uint32_t readRegister(uint64_t reg);
 public:
+    static void initialize();
     LAPIC() = default;
-    LAPIC(uint32_t* address);
     void enable();
     void sendEOI();
     size_t getID();
@@ -45,7 +47,10 @@ public:
     {
         return &timer;
     }
-    static LAPIC getLAPIC();
+    inline static uint64_t getAPICID()
+    {
+        return readRegister(0x20) >> 24;
+    }
 };
 class IOAPIC
 {

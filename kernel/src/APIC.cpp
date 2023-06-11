@@ -11,6 +11,7 @@
 #define APIC_REG_ID 0x20
 #define APIC_REG_ICR1 0x300
 #define APIC_REG_ICR2 0x310
+uint32_t* LAPIC::registers;
 void LAPIC::writeRegister(uint64_t reg, uint32_t val)
 {
     registers[reg] = val;
@@ -19,10 +20,11 @@ uint32_t LAPIC::readRegister(uint64_t reg)
 {
     return registers[reg];
 }
-LAPIC::LAPIC(uint32_t* registers) : timer(this)
+void LAPIC::initialize()
 {
-    VirtualMemoryManager::getKernelVirtualMemoryManager()->mapPage((uint64_t)(this->registers =
-        (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), (uint64_t)registers,
+    uint64_t registers_ = getMSR(APIC_BASE_MSR) & 0xFFFFFF000;
+    VirtualMemoryManager::getKernelVirtualMemoryManager()->mapPage((uint64_t)(registers =
+        (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), (uint64_t)registers_,
         VMM_PRESENT | VMM_READ_WRITE | VMM_CACHE_DISABLE);
 }
 void LAPIC::enable()
@@ -45,14 +47,10 @@ void LAPIC::sendIPI(uint8_t destination, uint32_t dsh, uint32_t type, uint8_t ve
     writeRegister(APIC_REG_ICR2, high);
     writeRegister(APIC_REG_ICR1, low);
 }
-LAPIC LAPIC::getLAPIC()
-{
-    return LAPIC((uint32_t*)(getMSR(APIC_BASE_MSR) & 0xFFFFFF000));
-}
 IOAPIC::IOAPIC(uint32_t* address)
 {
     VirtualMemoryManager::getKernelVirtualMemoryManager()->mapPage((uint64_t)(this->registers =
-        (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), (uint64_t)registers,
+       (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), (uint64_t)registers,
         VMM_PRESENT | VMM_READ_WRITE | VMM_CACHE_DISABLE);
 }
 void IOAPIC::setRedirection(size_t number, uint64_t destination, uint64_t vector)

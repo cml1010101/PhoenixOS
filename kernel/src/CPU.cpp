@@ -72,11 +72,11 @@ void CPU::Core::setVirtualMemoryManager(VirtualMemoryManager* vmm)
 }
 void CPU::Core::resetMMU()
 {
-    asm volatile ("mov %0, %%cr3":: "r"(vmm->getPhysicalAddress()));
+    vmm->reset();
 }
 void CPU::Core::initializeGDT()
 {
-    gdt = GDT(true);
+    new(&gdt)GDT(true);
 }
 void CPU::Core::resetGDT()
 {
@@ -162,16 +162,23 @@ extern "C" void cpu_start_16();
 extern "C" uint64_t cpu_start_stack;
 extern "C" uint32_t cpu_start_cr3;
 extern "C" uint64_t cpu_start_id;
-CPU* CPU::instance = NULL;
-CPU::CPU()
+CPU CPU::instance;
+void CPU::start()
 {
     numCores = 1;
+    VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
     cores[0].setVirtualMemoryManager(VirtualMemoryManager::getKernelVirtualMemoryManager());
+    VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
     cores[0].resetMMU();
+    VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
     cores[0].initializeGDT();
+    VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
     cores[0].resetGDT();
+    VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
     cores[0].initializeIDT();
+    VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
     cores[0].resetIDT();
+    VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
     pit.setFrequency(1e5);
     pit.start();
     uint32_t lapicIDs[32];
@@ -194,16 +201,17 @@ CPU::CPU()
             }
         }
         apic = IOAPIC((uint32_t*)ioapicAddress);
-        cores[0].initializeLAPIC(LAPIC::getLAPIC());
-        uint64_t stack = (uint64_t)VirtualMemoryManager::getCurrentVirtualMemoryManager()->allocate(4) + 0x4000;
+        cores[0].initializeLAPIC(LAPIC());
+        uint64_t stack = (uint64_t)VirtualMemoryManager::getKernelVirtualMemoryManager()->
+            allocate(4, VMM_PRESENT | VMM_READ_WRITE) + 0x4000;
         for (size_t i = 1; i < numCores; i++)
         {
             cores[i].setVirtualMemoryManager(VirtualMemoryManager::getKernelVirtualMemoryManager());
             cpu_start_id = i;
             cpu_start_stack = stack;
             cpu_start_cr3 = cores[i].getVirtualMemoryManager()->getPhysicalAddress();
-            LAPIC::getLAPIC().sendIPI(i, 0, 5 << 8, 0);
-            LAPIC::getLAPIC().sendIPI(i, 0, 6 << 8, (uint64_t)&cpu_start_16 >> 12);
+            cores[0].getLAPIC().sendIPI(i, 0, 5 << 8, 0);
+            cores[0].getLAPIC().sendIPI(i, 0, 6 << 8, (uint64_t)&cpu_start_16 >> 12);
             while (!cores[i].isInitialized());
         }
     }
@@ -211,6 +219,7 @@ CPU::CPU()
     {
         cores[0].initializePIC();
     }
+    asm volatile ("sti");
 }
 bool CPU::supportsAPIC()
 {
@@ -224,7 +233,14 @@ CPU::Core& CPU::getCore(size_t i)
 }
 CPU::Core& CPU::getCurrentCore()
 {
-    return cores[LAPIC::getLAPIC().getID()];
+    if (supportsAPIC())
+    {
+        return cores[LAPIC::getAPICID()];
+    }
+    else
+    {
+        return cores[0];
+    }
 }
 extern "C" void core_initialization_routine(uint64_t id)
 {
@@ -234,15 +250,11 @@ extern "C" void core_initialization_routine(uint64_t id)
     core.resetGDT();
     core.initializeIDT();
     core.resetIDT();
-    core.initializeLAPIC(LAPIC::getLAPIC());
+    core.initializeLAPIC(LAPIC());
     core.getLAPIC().getTimer()->setFrequency(1e+5);
     core.getLAPIC().getTimer()->start();
-    core.getLAPIC().getTimer()->setInterruptHandler(
-    [](CPURegisters* registers)
-    {
-        CPU::getInstance()->getCurrentCore().schedule(registers);
-    });
     core.setInitialized(true);
+    asm volatile ("sti");
 }
 extern "C" void irq_handler(CPURegisters* regs)
 {
@@ -255,4 +267,26 @@ extern "C" void int_handler(CPURegisters* regs)
 extern "C" void isr_handler(CPURegisters* regs)
 {
     CPU::getInstance()->getCurrentCore().handleISR(regs);
+}
+void CPU::initializeScheduling()
+{
+    if (supportsAPIC())
+    {
+        Timer* clockTimer;
+        Timer* interruptTimer = getCore(0).getLAPIC().getTimer();
+        clockTimer = interruptTimer;
+        clockTimer->start();
+        *cores[0].getScheduler() = Scheduler(interruptTimer, clockTimer, true);
+        for (size_t i = 1; i < numCores; i++)
+        {
+            interruptTimer = getCore(i).getLAPIC().getTimer();
+            *cores[i].getScheduler() = Scheduler(interruptTimer, clockTimer, true);
+        }
+    }
+    else
+    {
+        Timer* clockTimer;
+        Timer* interruptTimer = clockTimer = PIT::getInstance();
+        *cores[0].getScheduler() = Scheduler(interruptTimer, clockTimer, true);
+    }
 }

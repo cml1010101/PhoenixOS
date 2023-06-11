@@ -1,11 +1,16 @@
 #include <Heap.hpp>
+#include <CPU.hpp>
 #define HEAP_MAGIC 0xBEEFCAFEBEEFCAFE
-Heap::Heap(size_t pages) : Heap(pages, VirtualMemoryManager::getCurrentVirtualMemoryManager())
+Heap* Heap::currentHeap;
+Heap* Heap::kernelHeap;
+Heap::Heap(size_t pages, bool kernel) : Heap(pages, kernel, CPU::getInstance()->getCurrentCore().getVirtualMemoryManager())
 {
 }
-Heap::Heap(size_t pages, VirtualMemoryManager* vmm)
+Heap::Heap(size_t pages, bool kernel, VirtualMemoryManager* vmm)
 {
-    heapStart = (HeapEntry*)vmm->allocate(pages);
+    heapStart = (HeapEntry*)vmm->allocate(pages, kernel ?
+        VMM_PRESENT | VMM_READ_WRITE
+        : VMM_PRESENT | VMM_READ_WRITE | VMM_USER);
     heapStart->free = 1;
     heapStart->size = (pages << 12) - sizeof(HeapEntry);
     heapStart->magic = HEAP_MAGIC;
@@ -170,6 +175,11 @@ extern "C" void* realloc(void* ptr, size_t size)
 extern "C" void free(void* ptr)
 {
     Heap::getCurrentHeap()->free(ptr);
+}
+void Heap::initialize()
+{
+    kernelHeap = (Heap*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocate(1, VMM_PRESENT | VMM_READ_WRITE);
+    *kernelHeap = Heap(0x1000, true);
 }
 void* operator new(size_t size)
 {

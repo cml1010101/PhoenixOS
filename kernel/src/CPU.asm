@@ -38,8 +38,8 @@ cpu_start_64:
     mov rax, cr4
     or ax, 3 << 9
     mov cr4, rax
-    mov eax, [cpu_start_cr3]
-    mov cr3, eax
+    mov rax, [cpu_start_cr3]
+    mov cr3, rax
     mov rsp, [cpu_start_stack]
     xor rbx, rbx
     mov rdi, [cpu_start_id]

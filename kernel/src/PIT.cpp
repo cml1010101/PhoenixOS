@@ -17,7 +17,8 @@ void PIT::start()
             getInstance()->incrementCount();
             if (getInstance()->getHandler()) getInstance()->getHandler()(regs);
         });
-        CPU::getInstance()->getIOAPIC().setRedirection(0, LAPIC::getLAPIC().getID(), 32);
+        if (CPU::getInstance()->supportsAPIC())
+            CPU::getInstance()->getIOAPIC().setRedirection(0, LAPIC::getAPICID(), 32);
     }
 }
 void PIT::stop()

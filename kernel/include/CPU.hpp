@@ -39,7 +39,10 @@ public:
         void initializePIC();
         void handleInterrupt(CPURegisters* regs);
         void handleISR(CPURegisters* regs);
-        void schedule(CPURegisters* regs);
+        inline Scheduler* getScheduler()
+        {
+            return &scheduler;
+        }
         inline void setInterruptHandler(size_t num, InterruptHandler handler)
         {
             handlers[num] = handler;
@@ -63,9 +66,10 @@ private:
     Core cores[16];
     IOAPIC apic;
     PIT pit;
-    static CPU* instance;
+    static CPU instance;
 public:
-    CPU();
+    CPU() = default;
+    void start();
     bool supportsAPIC();
     Core& getCore(size_t i);
     Core& getCurrentCore();
@@ -75,12 +79,33 @@ public:
     }
     static inline void initialize()
     {
-        instance = (CPU*)VirtualMemoryManager::getCurrentVirtualMemoryManager()->allocate(1);
-        *instance = CPU();
+        instance.start();
     }
     static inline CPU* getInstance()
     {
-        return instance;
+        return &instance;
     }
+    inline uint64_t getSegment(uint8_t ring, bool code)
+    {
+        uint8_t codeOffset = code ? 0 : 8;
+        switch (ring)
+        {
+        case 0:
+            return 0x8 + codeOffset;
+        case 1:
+            return 0x19 + codeOffset;
+        case 2:
+            return 0x2A + codeOffset;
+        case 3:
+            return 0x3B + codeOffset;
+        default:
+            return 0;
+        }
+    }
+    inline size_t getNumberOfCores()
+    {
+        return numCores;
+    }
+    void initializeScheduling();
 };
 #endif
