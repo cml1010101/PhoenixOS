@@ -5,9 +5,9 @@
 VirtualMemoryManager* VirtualMemoryManager::kernelVirtualMemoryManager;
 extern "C" char _kernel_start;
 extern "C" char _kernel_end, _cpu_init_start, _cpu_init_end;
-uint64_t VirtualMemoryManager::findFree(uint64_t pages)
+uint64_t VirtualMemoryManager::findFree(uint64_t pages, uint64_t minimumAdress)
 {
-    size_t i = 0x1000;
+    size_t i = minimumAdress;
     VirtualAddressAllocation* allocationTable = useVirtualAddresses ? allocationTableVirt : allocationTablePhys;
     size_t k = 0;
     while (i < (1UL << 52))
@@ -152,9 +152,9 @@ void VirtualMemoryManager::mapPage(uint64_t virt, uint64_t phys, uint64_t flags)
     }
     asm volatile ("mov %cr3, %rax; mov %rax, %cr3");
 }
-uint64_t VirtualMemoryManager::allocateAddress(uint64_t pages)
+uint64_t VirtualMemoryManager::allocateAddress(uint64_t pages, uint64_t minimumAddress)
 {
-    size_t i = findFree(pages);
+    size_t i = findFree(pages, minimumAddress);
     VirtualAddressAllocation alloc;
     alloc.address = i;
     alloc.size = pages;

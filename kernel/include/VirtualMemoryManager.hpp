@@ -18,7 +18,7 @@ private:
     };
     VirtualAddressAllocation* allocationTablePhys;
     VirtualAddressAllocation* allocationTableVirt;
-    uint64_t findFree(uint64_t pages);
+    uint64_t findFree(uint64_t pages, uint64_t minimumAddress = 0x1000);
     uint64_t rsp = 0;
     static VirtualMemoryManager* kernelVirtualMemoryManager;
     bool useVirtualAddresses, remap;
@@ -37,7 +37,7 @@ public:
             mapPage(virt + (i << 12), phys + (i << 12), flags);
         }
     }
-    uint64_t allocateAddress(uint64_t pages, uint64_t minimumAddress = 0x0);
+    uint64_t allocateAddress(uint64_t pages, uint64_t minimumAddress = 0x1000);
     void* allocate(uint64_t pages, uint64_t flags);
     inline uint64_t getPhysicalAddress()
     {
