@@ -83,5 +83,6 @@ public:
         return idx;
     }
     void setupPaging();
+    void printStatus(Logger* logger);
 };
 #endif

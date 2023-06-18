@@ -85,3 +85,19 @@ void PhysicalMemoryManager::setupPaging()
         VMM_PRESENT | VMM_READ_WRITE, numBitmapPages);
     bitmap = (uint64_t*)bitmapVirt;
 }
+void PhysicalMemoryManager::printStatus(Logger* logger)
+{
+    size_t i = 0, k = 0, flag = getPage(0);
+    while ((i + k) < numTotalPages)
+    {
+        if (!!getPage(i + k) != !!flag)
+        {
+            logger->log("%d pages at 0x%x: %s\n", k, i << 12, flag ? "Taken" : "Free");
+            i += k;
+            k = 0;
+            if (i < numTotalPages)
+                flag = getPage(i);
+        }
+        else k++;
+    }
+}
