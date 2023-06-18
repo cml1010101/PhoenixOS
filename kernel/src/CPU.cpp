@@ -145,6 +145,12 @@ void CPU::Core::handleISR(CPURegisters* regs)
     size_t intNum = regs->num;
     if (handlers[intNum]) handlers[intNum](regs);
     Logger::getInstance()->log("[0x%x]: %s(0x%x)\n", regs->rip, isrMessages[regs->num], regs->code);
+    if (intNum == 14)
+    {
+        uint64_t cr2;
+        asm volatile ("mov %%cr2, %0": "=r"(cr2));
+        Logger::getInstance()->log("CR2: 0x%x\n", cr2);
+    }
     if (scheduler.getActiveThread() == Scheduler::getKernelThread())
     {
         for (;;);
@@ -186,17 +192,25 @@ void CPU::start()
     {
         numCores = 0;
         auto madt = XSDT::getInstance()->find("APIC");
+        Logger::getInstance()->log("&madt = 0x%x\n", madt);
         uint8_t* data = (uint8_t*)&madt[1];
+        data = (uint8_t*)(&data[8]);
+        Logger::getInstance()->log("data: 0x%x\n", data);
         uint32_t ioapicAddress;
+        uint64_t rsp;
+        asm volatile ("mov %%rsp, %0": "=r"(rsp));
+        Logger::getInstance()->log("rsp: 0x%x\n", rsp);
         for (size_t i = 0; i < madt->length - sizeof(ACPIHeader); i += data[i + 1])
         {
             switch (data[i])
             {
             case 0:
-                lapicIDs[numCores++] = data[3];
+                Logger::getInstance()->log("Found core: 0x%x\n", data[i + 3]);
+                lapicIDs[numCores++] = data[i + 3];
                 break;
             case 1:
-                ioapicAddress = *(uint32_t*)(&data[4]);
+                Logger::getInstance()->log("Found IOAPIC: 0x%x\n", *(uint32_t*)(&data[i + 4]));
+                ioapicAddress = *(uint32_t*)(&data[i + 4]);
                 break;
             }
         }
