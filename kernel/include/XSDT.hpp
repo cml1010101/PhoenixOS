@@ -1,7 +1,7 @@
 #ifndef XSDT_HPP
 #define XSDT_HPP
 #include <PhoenixOS.hpp>
-struct ACPIHeader
+struct __attribute__((packed)) ACPIHeader
 {
     char signature[4];
     uint32_t length;
@@ -25,7 +25,7 @@ struct __attribute__((packed)) XSDP
     uint8_t extendedChecksum;
     uint8_t reserved[3];
 };
-class XSDT
+class __attribute__((packed)) XSDT
 {
 private:
     ACPIHeader header;
