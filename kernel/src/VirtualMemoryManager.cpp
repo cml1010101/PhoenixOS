@@ -207,8 +207,11 @@ void VirtualMemoryManager::addAddressAllocation(VirtualAddressAllocation allocat
 void* VirtualMemoryManager::allocate(size_t pages, size_t flags)
 {
     uint64_t virt = allocateAddress(pages);
-    uint64_t phys = PhysicalMemoryManager::instance.allocatePages(pages) << 12;
-    map(virt, phys, flags, pages);
+    for (size_t i = 0; i < pages; i++)
+    {
+        uint64_t phys = PhysicalMemoryManager::instance.allocatePage() << 12;
+        mapPage(virt + (i << 12), phys, flags);
+    }
     return (void*)virt;
 }
 uint64_t VirtualMemoryManager::getPhysicalAddress(void* address)
