@@ -88,7 +88,7 @@ void VirtualMemoryManager::mapPage(uint64_t virt, uint64_t phys, uint64_t flags)
         if (!(pml4Virt[pml4Idx] & VMM_PRESENT))
         {
             uint64_t paddr = PhysicalMemoryManager::instance.allocatePages(2) << 12;
-            uint64_t vaddr = allocateAddress(2);
+            uint64_t vaddr = allocateAddress(2, 0xA00000000);
             map(vaddr, paddr, VMM_PRESENT | VMM_READ_WRITE | VMM_CACHE_DISABLE, 2);
             memset((void*)vaddr, 0, 0x2000);
             pml4Virt[pml4Idx] = paddr | flags;
@@ -98,7 +98,7 @@ void VirtualMemoryManager::mapPage(uint64_t virt, uint64_t phys, uint64_t flags)
         if (!(pdpt[pdptIdx] & VMM_PRESENT))
         {
             uint64_t paddr = PhysicalMemoryManager::instance.allocatePages(2) << 12;
-            uint64_t vaddr = allocateAddress(2);
+            uint64_t vaddr = allocateAddress(2, 0xA00000000);
             map(vaddr, paddr, VMM_PRESENT | VMM_READ_WRITE | VMM_CACHE_DISABLE, 2);
             memset((void*)vaddr, 0, 0x2000);
             pdpt[pdptIdx] = paddr | flags;
@@ -108,7 +108,7 @@ void VirtualMemoryManager::mapPage(uint64_t virt, uint64_t phys, uint64_t flags)
         if (!(pd[pdIdx] & VMM_PRESENT))
         {
             uint64_t paddr = PhysicalMemoryManager::instance.allocatePage() << 12;
-            uint64_t vaddr = allocateAddress(1);
+            uint64_t vaddr = allocateAddress(1, 0xA00000000);
             map(vaddr, paddr, VMM_PRESENT | VMM_READ_WRITE | VMM_CACHE_DISABLE, 1);
             memset((void*)vaddr, 0, 0x1000);
             pd[pdIdx] = paddr | flags;
@@ -121,7 +121,7 @@ void VirtualMemoryManager::mapPage(uint64_t virt, uint64_t phys, uint64_t flags)
         if (!(pml4Phys[pml4Idx] & VMM_PRESENT))
         {
             uint64_t paddr = PhysicalMemoryManager::instance.allocatePages(2) << 12;
-            uint64_t vaddr = allocateAddress(2);
+            uint64_t vaddr = allocateAddress(2, 0xA00000000);
             memset((void*)paddr, 0, 0x2000);
             pml4Phys[pml4Idx] = paddr | flags;
             pml4Phys[512 + pml4Idx] = vaddr;
@@ -131,7 +131,7 @@ void VirtualMemoryManager::mapPage(uint64_t virt, uint64_t phys, uint64_t flags)
         if (!(pdpt[pdptIdx] & VMM_PRESENT))
         {
             uint64_t paddr = PhysicalMemoryManager::instance.allocatePages(2) << 12;
-            uint64_t vaddr = allocateAddress(2);
+            uint64_t vaddr = allocateAddress(2, 0xA00000000);
             memset((void*)paddr, 0, 0x2000);
             pdpt[pdptIdx] = paddr | flags;
             pdpt[512 + pdptIdx] = vaddr;
@@ -141,7 +141,7 @@ void VirtualMemoryManager::mapPage(uint64_t virt, uint64_t phys, uint64_t flags)
         if (!(pd[pdIdx] & VMM_PRESENT))
         {
             uint64_t paddr = PhysicalMemoryManager::instance.allocatePage() << 12;
-            uint64_t vaddr = allocateAddress(1);
+            uint64_t vaddr = allocateAddress(1, 0xA00000000);
             memset((void*)paddr, 0, 0x1000);
             pd[pdIdx] = paddr | flags;
             pd[pdIdx + 512] = vaddr;
@@ -273,7 +273,7 @@ VirtualMemoryManager* VirtualMemoryManager::clone()
         {
             uint64_t* pdptVirt = (uint64_t*)pml4Virt[i + 512];
             uint64_t newPdptPhys = PhysicalMemoryManager::instance.allocatePages(2);
-            uint64_t* newPdptVirt = (uint64_t*)allocateAddress(2);
+            uint64_t* newPdptVirt = (uint64_t*)allocateAddress(2, 0xA00000000);
             map((uint64_t)newPdptVirt, newPdptPhys, VMM_PRESENT | VMM_READ_WRITE, 2);
             memset(newPdptVirt, 0, 0x2000);
             memoryManager->pml4Virt[i] = newPdptPhys | VMM_PRESENT | VMM_READ_WRITE;
@@ -284,7 +284,7 @@ VirtualMemoryManager* VirtualMemoryManager::clone()
                 {
                     uint64_t* pdVirt = (uint64_t*)pdptVirt[i + 512];
                     uint64_t newPdPhys = PhysicalMemoryManager::instance.allocatePages(2);
-                    uint64_t* newPdVirt = (uint64_t*)allocateAddress(2);
+                    uint64_t* newPdVirt = (uint64_t*)allocateAddress(2, 0xA00000000);
                     map((uint64_t)newPdVirt, newPdPhys, VMM_PRESENT | VMM_READ_WRITE, 2);
                     memset(newPdVirt, 0, 0x2000);
                     newPdptVirt[j] = newPdPhys | VMM_PRESENT | VMM_READ_WRITE;
@@ -293,7 +293,7 @@ VirtualMemoryManager* VirtualMemoryManager::clone()
                     {
                         uint64_t* ptVirt = (uint64_t*)pdVirt[i + 512];
                         uint64_t newPtPhys = PhysicalMemoryManager::instance.allocatePage();
-                        uint64_t* newPtVirt = (uint64_t*)allocateAddress(1);
+                        uint64_t* newPtVirt = (uint64_t*)allocateAddress(1, 0xA00000000);
                         map((uint64_t)newPdVirt, newPdPhys, VMM_PRESENT | VMM_READ_WRITE, 1);
                         memcpy(newPtVirt, ptVirt, 0x1000);
                         newPdVirt[k] = newPtPhys | VMM_PRESENT | VMM_READ_WRITE;
