@@ -29,6 +29,7 @@ public:
     void mapPage(uint64_t virt, uint64_t phys, uint64_t flags);
     inline void map(uint64_t virt, uint64_t phys, uint64_t flags, uint64_t pages)
     {
+        if (pages == 0) Logger::getInstance()->panic("Cannot map 0 pages\n");
         Logger::getInstance()->log("Mapping %d pages from phys 0x%x(0x%x) to virt 0x%x(0x%x)\n", pages, phys, phys + (pages << 12),
             virt, virt + (pages << 12));
         for (size_t i = 0; i < pages; i++)
