@@ -28,9 +28,9 @@ void XSDT::setupPaging()
     uint64_t virt = VirtualMemoryManager::
         getKernelVirtualMemoryManager()->
         allocateAddress((instance->header.length + 0xFFF) / 0x1000);
-    VirtualMemoryManager::getKernelVirtualMemoryManager()->map(virt, (uint64_t)instance, VMM_PRESENT | VMM_READ_WRITE
+    VirtualMemoryManager::getKernelVirtualMemoryManager()->map(virt, (uint64_t)instance & VMM_ADDR, VMM_PRESENT | VMM_READ_WRITE
         | VMM_CACHE_DISABLE, (instance->header.length + 0xFFF) / 0x1000);
-    instance = (XSDT*)virt;
+    uint64_t instanceAddr = virt | ((uint64_t)instance & ~VMM_ADDR);
     for (size_t i = 0; i < (instance->header.length - sizeof(ACPIHeader)) / 8; i++)
     {
         virt = VirtualMemoryManager::
@@ -38,8 +38,9 @@ void XSDT::setupPaging()
             allocateAddress((instance->entries[i]->length + 0xFFF) / 0x1000);
         VirtualMemoryManager::getKernelVirtualMemoryManager()->map(virt, (uint64_t)instance->entries[i], VMM_PRESENT | VMM_READ_WRITE
             | VMM_CACHE_DISABLE, (instance->entries[i]->length + 0xFFF) / 0x1000);
-        //instance->entries[i] = (ACPIHeader*)virt;
+        instance->entries[i] = (ACPIHeader*)virt;
     }
+    instance = (XSDT*)instanceAddr;
 }
 XSDT* XSDT::getInstance()
 {
