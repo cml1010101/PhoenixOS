@@ -37,7 +37,7 @@ public:
             mapPage(virt + (i << 12), phys + (i << 12), flags);
         }
     }
-    uint64_t allocateAddress(uint64_t pages);
+    uint64_t allocateAddress(uint64_t pages, uint64_t minimumAddress = 0x0);
     void* allocate(uint64_t pages, uint64_t flags);
     inline uint64_t getPhysicalAddress()
     {
@@ -55,6 +55,5 @@ public:
     void printAllocationTable(Logger* logger);
     void reset();
     void checkMagic();
-    bool isFree(uint64_t address, uint64_t pages);
 };
 #endif
