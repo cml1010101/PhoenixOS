@@ -28,8 +28,8 @@ extern "C" void kernel_main(BootData* data)
     QemuLogger logger = QemuLogger(0x3F8);
     logger.log("0x%x - 0x%x\n", (uint64_t)&__init_array_start, (uint64_t)&__init_array_end);
     logger.log("Magic: 0x%x\n", data->magic);
-    XSDT::loadXSDT((XSDP*)data->acpi);
     Logger::setInstance(&logger);
+    XSDT::loadXSDT((XSDP*)data->acpi);
     PhysicalMemoryManager::instance = PhysicalMemoryManager(data->memoryMap, data->mapSize, data->descriptorSize);
     VirtualMemoryManager::initialize();
     CPU::initialize();
