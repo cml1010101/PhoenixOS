@@ -23,8 +23,19 @@ void __attribute__((constructor)) test()
 }
 extern char __init_array_start;
 extern char __init_array_end;
+extern char start_ctors, end_ctors;
+void callGlobalConstructors()
+{
+    Runnable* constructors = (Runnable*)&start_ctors;
+    size_t numConstructors = ((uint64_t)&end_ctors - (uint64_t)&start_ctors) / sizeof(Runnable);
+    for (size_t i = 0; i < numConstructors; i++)
+    {
+        constructors[i]();
+    }
+}
 extern "C" void kernel_main(BootData* data)
 {
+    callGlobalConstructors();
     QemuLogger logger = QemuLogger(0x3F8);
     logger.log("0x%x - 0x%x\n", (uint64_t)&__init_array_start, (uint64_t)&__init_array_end);
     logger.log("Magic: 0x%x\n", data->magic);
@@ -34,9 +45,14 @@ extern "C" void kernel_main(BootData* data)
     VirtualMemoryManager::initialize();
     CPU::initialize();
     Heap::initialize();
+    Logger::getInstance()->log("Initializing PIT\n");
     PIT pit = PIT();
     pit.setFrequency(1e+5);
     pit.start();
+    Logger::getInstance()->log("Started PIT\n");
+    Logger::getInstance()->log("Starting scheduling...\n");
+    asm volatile ("sti");
     CPU::getInstance()->initializeScheduling();
+    Logger::getInstance()->log("Scheduling!!!\n");
     for (;;);
 }

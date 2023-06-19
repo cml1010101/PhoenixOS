@@ -289,7 +289,9 @@ void CPU::initializeScheduling()
         Timer* clockTimer;
         Timer* interruptTimer = getCore(0).getLAPIC().getTimer();
         clockTimer = interruptTimer;
+        Logger::getInstance()->log("Got interrupt timer: 0x%x\n", clockTimer);
         clockTimer->start();
+        Logger::getInstance()->log("Started interrupt timer\n");
         *cores[0].getScheduler() = Scheduler(interruptTimer, clockTimer, true);
         for (size_t i = 1; i < numCores; i++)
         {

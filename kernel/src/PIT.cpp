@@ -13,7 +13,9 @@ void PIT::start()
         outb(0x40, l);
         outb(0x40, h);
         count = 0;
-        CPU::getInstance()->getCurrentCore().setInterruptHandler(0, [](CPURegisters* regs) {
+        Logger::getInstance()->log("Set divisor to %d\n", divisor);
+        CPU::getInstance()->getCurrentCore().setInterruptHandler(32, [](CPURegisters* regs) {
+            Logger::getInstance()->log("PIT Timer tick\n");
             getInstance()->incrementCount();
             if (getInstance()->getHandler()) getInstance()->getHandler()(regs);
         });
