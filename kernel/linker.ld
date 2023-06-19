@@ -16,7 +16,14 @@ SECTIONS
     }
     .rodata BLOCK(4K) : ALIGN(4K)
     {
-        *(.rodata)
+        start_ctors = .;
+        *(SORT(.ctors*))  /* Note the "SORT" */
+        end_ctors = .;
+        start_dtors = .;
+        *(SORT(.dtors*))
+        end_dtors = .;
+        *(.rodata*)
+        *(.gnu.linkonce.r*)
     }
     .data BLOCK(4K) : ALIGN(4K)
     {

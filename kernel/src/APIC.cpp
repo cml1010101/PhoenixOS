@@ -71,7 +71,9 @@ void LAPICTimer::start()
     lapic->writeRegister(0x320, 0xFE);
     lapic->writeRegister(0x3E0, 3);
     lapic->writeRegister(0x380, 0xFFFFFFFF);
+    Logger::getInstance()->log("Preparing to enter planned sleep\n");
     PIT::getInstance()->sleep(10000);
+    Logger::getInstance()->log("Slept for 10000us\n");
     lapic->writeRegister(0x320, 0xFE | (1 << 16));
     uint64_t ticks = 0xFFFFFFFF - lapic->readRegister(0x390);
     double cpuFrequency = ticks * 100;
