@@ -27,6 +27,11 @@ void* Heap::allocate(size_t length)
     HeapEntry* entry = heapStart;
     while (entry)
     {
+        Logger::getInstance()->log("Entry: 0x%x\n", entry);
+        if (entry->magic != HEAP_MAGIC)
+        {
+            Logger::getInstance()->panic("Corrupted heap\n");
+        }
         if (entry->free)
         {
             if (entry->size > (alignedLength + sizeof(HeapEntry)))
@@ -179,7 +184,8 @@ extern "C" void free(void* ptr)
 void Heap::initialize()
 {
     kernelHeap = (Heap*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocate(1, VMM_PRESENT | VMM_READ_WRITE);
-    *kernelHeap = Heap(0x1000, true);
+    *kernelHeap = Heap(0x100, true);
+    currentHeap = kernelHeap;
 }
 void* operator new(size_t size)
 {

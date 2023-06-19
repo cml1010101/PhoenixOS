@@ -97,7 +97,6 @@ void CPU::Core::initializePIC()
 void CPU::Core::initializeLAPIC(LAPIC lapic)
 {
     this->lapic = lapic;
-    PIC::disable();
     lapic.enable();
 }
 void CPU::Core::handleInterrupt(CPURegisters* regs)
@@ -212,9 +211,17 @@ void CPU::start()
                 Logger::getInstance()->log("Found IOAPIC: 0x%x\n", *(uint32_t*)(&data[i + 4]));
                 ioapicAddress = *(uint32_t*)(&data[i + 4]);
                 break;
+            case 2:
+                Logger::getInstance()->log("Found iso: %d to %d\n", data[i + 3], *(uint32_t*)&data[i + 4]);
+                break;
+            case 5:
+                Logger::getInstance()->log("Uh oh!\n");
+                break;
             }
         }
         apic = IOAPIC((uint32_t*)ioapicAddress);
+        PIC::disable();
+        LAPIC::initialize();
         cores[0].initializeLAPIC(LAPIC());
         uint64_t stack = (uint64_t)VirtualMemoryManager::getKernelVirtualMemoryManager()->
             allocate(4, VMM_PRESENT | VMM_READ_WRITE) + 0x4000;

@@ -44,6 +44,7 @@ void PIC::disable()
 {
     outb(PIC_REG_DATA1, 0xFF);
     outb(PIC_REG_DATA2, 0xFF);
+    Logger::getInstance()->log("Disabled PIC\n");
 }
 void PIC::sendEOI(size_t irqNum)
 {

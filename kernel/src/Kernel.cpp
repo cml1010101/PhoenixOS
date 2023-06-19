@@ -45,6 +45,9 @@ extern "C" void kernel_main(BootData* data)
     VirtualMemoryManager::initialize();
     CPU::initialize();
     Heap::initialize();
+    int* dat = new int[5];
+    Logger::getInstance()->log("new int[5] = 0x%x\n", dat);
+    delete[] dat;
     Logger::getInstance()->log("Initializing PIT\n");
     PIT pit = PIT();
     pit.setFrequency(1e+5);

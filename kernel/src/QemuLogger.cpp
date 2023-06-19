@@ -16,8 +16,8 @@ void QemuLogger::print(const char* str)
 }
 void QemuLogger::log(const char* frmt, ...)
 {
-    static Spinlock lock;
-    lock.acquire();
+    // static Spinlock lock;
+    // lock.acquire();
     va_list ls;
     va_start(ls, frmt);
     size_t i = 0;
@@ -54,12 +54,12 @@ void QemuLogger::log(const char* frmt, ...)
         else putc(frmt[i]);
         i++;
     }
-    lock.release();
+    // lock.release();
 }
 void QemuLogger::panic(const char* frmt, ...)
 {
-    static Spinlock lock;
-    lock.acquire();
+    // static Spinlock lock;
+    // lock.acquire();
     va_list ls;
     va_start(ls, frmt);
     size_t i = 0;
@@ -96,6 +96,6 @@ void QemuLogger::panic(const char* frmt, ...)
         else putc(frmt[i]);
         i++;
     }
-    lock.release();
+    // lock.release();
     for (;;);
 }

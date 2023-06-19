@@ -15,12 +15,11 @@ void PIT::start()
         count = 0;
         Logger::getInstance()->log("Set divisor to %d\n", divisor);
         CPU::getInstance()->getCurrentCore().setInterruptHandler(32, [](CPURegisters* regs) {
-            Logger::getInstance()->log("PIT Timer tick\n");
             getInstance()->incrementCount();
             if (getInstance()->getHandler()) getInstance()->getHandler()(regs);
         });
         if (CPU::getInstance()->supportsAPIC())
-            CPU::getInstance()->getIOAPIC().setRedirection(0, LAPIC::getAPICID(), 32);
+            CPU::getInstance()->getIOAPIC().setRedirection(2, LAPIC::getAPICID(), 32);
     }
 }
 void PIT::stop()
