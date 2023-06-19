@@ -34,6 +34,7 @@ private:
     friend class LAPICTimer;
     LAPICTimer timer;
     static uint32_t* registers;
+    static uint64_t registersPhys;
     static void writeRegister(uint64_t reg, uint32_t val);
     static uint32_t readRegister(uint64_t reg);
 public:
@@ -71,5 +72,6 @@ public:
     IOAPIC(uint32_t* registers);
     void setRedirection(uint64_t number, uint64_t destination, uint64_t vector);
     void disableRedirection(uint64_t number);
+    uint64_t getIOAPICVER();
 };
 #endif

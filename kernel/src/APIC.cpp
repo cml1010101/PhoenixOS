@@ -11,25 +11,27 @@
 #define APIC_REG_ID 0x20
 #define APIC_REG_ICR1 0x300
 #define APIC_REG_ICR2 0x310
+#define APIC_REG_TPR 0x80
 uint32_t* LAPIC::registers;
+uint64_t LAPIC::registersPhys;
 void LAPIC::writeRegister(uint64_t reg, uint32_t val)
 {
-    registers[reg] = val;
+    registers[reg / 4] = val;
 }
 uint32_t LAPIC::readRegister(uint64_t reg)
 {
-    return registers[reg];
+    return registers[reg / 4];
 }
 void LAPIC::initialize()
 {
-    uint64_t registers_ = getMSR(APIC_BASE_MSR) & 0xFFFFFF000;
+    registersPhys = getMSR(APIC_BASE_MSR) & 0xFFFFFF000;
     VirtualMemoryManager::getKernelVirtualMemoryManager()->mapPage((uint64_t)(registers =
-        (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), (uint64_t)registers_,
+        (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), registersPhys,
         VMM_PRESENT | VMM_READ_WRITE | VMM_CACHE_DISABLE);
 }
 void LAPIC::enable()
 {
-    setMSR(APIC_BASE_MSR, (uint64_t)registers | APIC_BASE_MSR_ENABLE);
+    setMSR(APIC_BASE_MSR, getMSR(APIC_BASE_MSR) | APIC_BASE_MSR_ENABLE);
     writeRegister(APIC_REG_SIV, readRegister(APIC_REG_SIV) | 0x100);
 }
 void LAPIC::sendEOI()
@@ -50,17 +52,22 @@ void LAPIC::sendIPI(uint8_t destination, uint32_t dsh, uint32_t type, uint8_t ve
 IOAPIC::IOAPIC(uint32_t* address)
 {
     VirtualMemoryManager::getKernelVirtualMemoryManager()->mapPage((uint64_t)(this->registers =
-       (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), (uint64_t)registers,
+       (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), (uint64_t)address,
         VMM_PRESENT | VMM_READ_WRITE | VMM_CACHE_DISABLE);
 }
 void IOAPIC::setRedirection(size_t number, uint64_t destination, uint64_t vector)
 {
+    Logger::getInstance()->log("Mapping global %d to %d\n", number, vector);
     writeRegister(number * 2 + 0x10, vector);
     writeRegister(number * 2 + 0x11, destination << 24);
 }
 void IOAPIC::disableRedirection(size_t number)
 {
     writeRegister(number * 2 + 0x10, 1 << 16);
+}
+uint64_t IOAPIC::getIOAPICVER()
+{
+    return readRegister(1);
 }
 LAPICTimer::LAPICTimer(LAPIC* lapic) : lapic(lapic)
 {
