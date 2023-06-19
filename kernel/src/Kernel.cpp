@@ -79,7 +79,7 @@ extern "C" void kernel_main(BootData* data)
             modules.add(new Module(data->modules[i].moduleName, data->modules[i].address, data->modules[i].pages));
         }
     }
-    ModuleLoader::instance = ModuleLoader(modules);
+    new (&ModuleLoader::instance) ModuleLoader(modules);
     for (;;);
 }
 void otherFunction()
