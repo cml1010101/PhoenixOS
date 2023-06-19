@@ -11,7 +11,7 @@ CRTN_OBJ=src/crtn.s.o
 CRT0_OBJ=src/crt0.s.o
 all: kernel.elf
 kernel.elf: ${CPP_OBJS} ${C_OBJS} ${ASM_OBJS} ${CRT0_OBJ} ${CRTBEGIN_OBJ} ${CRTEND_OBJ} ${CRTN_OBJ} ${CRTI_OBJ}
-	x86_64-elf-gcc ${CRTI_OBJ} ${CRTBEGIN_OBJ} ${CRT0_OBJ} ${CPP_OBJS} ${C_OBJS} ${ASM_OBJS} ${CRTEND_OBJ} ${CRTNma_OBJ} -o $@ -Tlinker.ld -nostdlib -ffreestanding -znocombreloc -Bsymbolic -L${HOME}/opt/cross/lib/gcc/x86_64-elf/13.1.0 -lgcc
+	x86_64-elf-gcc ${CRTI_OBJ} ${CRTBEGIN_OBJ} ${CRT0_OBJ} ${CPP_OBJS} ${C_OBJS} ${ASM_OBJS} ${CRTEND_OBJ} ${CRTN_OBJ} -o $@ -Tlinker.ld -nostdlib -ffreestanding -znocombreloc -Bsymbolic -L${HOME}/opt/cross/lib/gcc/x86_64-elf/13.1.0 -lgcc
 %.c.o: %.c
 	x86_64-elf-gcc -c $< -o $@
 %.cpp.o: %.cpp

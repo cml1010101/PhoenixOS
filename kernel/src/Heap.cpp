@@ -18,34 +18,29 @@ Heap::Heap(size_t pages, bool kernel, VirtualMemoryManager* vmm)
 }
 void* Heap::allocate(size_t length)
 {
-    size_t alignedLength = length;
-    if (length & 7)
-    {
-        alignedLength &= ~7;
-        alignedLength += 8;
-    }
     HeapEntry* entry = heapStart;
     while (entry)
     {
         if (entry->magic != HEAP_MAGIC)
         {
+            print(Logger::getInstance());
             Logger::getInstance()->panic("Corrupted heap\n");
         }
         if (entry->free)
         {
-            if (entry->size > (alignedLength + sizeof(HeapEntry)))
+            if (entry->size > (length + sizeof(HeapEntry)))
             {
                 entry->free = 0;
-                HeapEntry* newEntry = (HeapEntry*)&((char*)&entry[1])[alignedLength];
+                HeapEntry* newEntry = (HeapEntry*)&((char*)&entry[1])[length];
                 newEntry->free = 1;
-                newEntry->size = entry->size - sizeof(HeapEntry) - alignedLength;
+                newEntry->size = entry->size - sizeof(HeapEntry) - length;
                 newEntry->next = entry->next;
                 newEntry->magic = HEAP_MAGIC;
                 entry->size = length;
                 entry->next = newEntry;
                 return &entry[1];
             }
-            else if (entry->size >= alignedLength)
+            else if (entry->size >= length)
             {
                 entry->free = 0;
                 return &entry[1];
@@ -58,13 +53,6 @@ void* Heap::allocate(size_t length)
 void* Heap::reallocate(void* ptr, size_t newLength)
 {
     HeapEntry* entry = (HeapEntry*)ptr - 1;
-    if (!entry->next)
-    {
-        void* newPtr = allocate(newLength);
-        memcpy(newPtr, ptr, entry->size);
-        free(ptr);
-        return newPtr;
-    }
     if (!entry->next->free)
     {
         void* newPtr = allocate(newLength);
@@ -72,27 +60,22 @@ void* Heap::reallocate(void* ptr, size_t newLength)
         free(ptr);
         return newPtr;
     }
-    size_t alignedLength = newLength;
-    if (alignedLength & 7)
+    size_t availableSize = entry->next->size + sizeof(HeapEntry) + entry->size;
+    if (availableSize > (newLength + sizeof(HeapEntry)))
     {
-        alignedLength &= ~7;
-        alignedLength += 8;
-    }
-    size_t availableSize = entry->next->size + sizeof(HeapEntry) + ((uint64_t)entry->next - (uint64_t)&entry[1]);
-    if (availableSize > (alignedLength + sizeof(HeapEntry)))
-    {
-        HeapEntry* newEntry = (HeapEntry*)&((char*)&entry[1])[alignedLength];
+        HeapEntry* newEntry = (HeapEntry*)&((char*)&entry[1])[newLength];
         newEntry->free = 1;
-        newEntry->size = entry->size - sizeof(HeapEntry) - alignedLength;
-        newEntry->next = entry->next;
+        newEntry->size = availableSize - sizeof(HeapEntry) - newLength;
+        newEntry->next = entry->next->next;
         newEntry->magic = HEAP_MAGIC;
         entry->size = newLength;
         entry->next = newEntry;
         return &entry[1];
     }
-    else if (availableSize >= alignedLength)
+    else if (availableSize >= newLength)
     {
         entry->size = newLength;
+        entry->next = entry->next->next;
         return &entry[1];
     }
     void* newPtr = allocate(newLength);
@@ -113,7 +96,8 @@ void Heap::check()
     {
         if (entry->magic != HEAP_MAGIC)
         {
-            Logger::getInstance()->panic("Corrupted Heap");
+            print(Logger::getInstance());
+            Logger::getInstance()->panic("Corrupted Heap\n");
         }
         entry = entry->next;
     }
@@ -121,52 +105,29 @@ void Heap::check()
 void Heap::clean()
 {
     HeapEntry* entry = heapStart;
-    HeapEntry* previous = NULL;
-    while (entry)
+    while (entry->next)
     {
         if (entry->magic != HEAP_MAGIC)
         {
-            Logger::getInstance()->panic("Corrupted Heap");
+            print(Logger::getInstance());
+            Logger::getInstance()->panic("Corrupted Heap\n");
         }
-        if (previous == NULL || !entry->free)
+        if (entry->free && entry->next->free)
         {
-            previous = entry;
-            entry = entry->next;
-            continue;
+            entry->size += entry->next->size + sizeof(HeapEntry);
+            entry->next = entry->next->next;
         }
-        if (previous->free)
-        {
-            if (entry->next)
-            {
-                previous->next = entry->next;
-                previous->size = (uint64_t)entry->next - (uint64_t)&previous[1];
-                entry = entry->next;
-                continue;
-            }
-            else
-            {
-                previous->size += entry->size + sizeof(HeapEntry);
-                previous->next = NULL;
-                entry = NULL;
-                continue;
-            }
-        }
-        else
-        {
-            uint64_t actualSize = (uint64_t)entry - (uint64_t)&previous[1];
-            if (actualSize - previous->size >= 8)
-            {
-                size_t shift = (actualSize - previous->size) & ~0x7;
-                HeapEntry* newEntry = (HeapEntry*)((char*)entry - shift);
-                HeapEntry* next = entry->next;
-                size_t newSize = shift + entry->size;
-                newEntry->free = 1;
-                newEntry->magic = HEAP_MAGIC;
-                newEntry->next = next;
-                newEntry->size = newSize;
-                previous->next = newEntry;
-            }
-        }
+        if (!entry->next) return;
+        entry = entry->next;
+    }
+}
+void Heap::print(Logger* logger)
+{
+    HeapEntry* entry = heapStart;
+    while (entry)
+    {
+        Logger::getInstance()->log("%d bytes at 0x%x: %s\n", entry->size, &entry[1], entry->free ? "Free" : "Taken");
+        if (entry->magic != HEAP_MAGIC) break;
         entry = entry->next;
     }
 }

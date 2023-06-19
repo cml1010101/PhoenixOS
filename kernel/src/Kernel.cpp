@@ -7,6 +7,7 @@
 #include <efilib.h>
 #include <QemuLogger.hpp>
 #include <XSDT.hpp>
+#include <Module.hpp>
 struct BootData
 {
     EFI_GRAPHICS_OUTPUT_PROTOCOL* gop;
@@ -15,6 +16,12 @@ struct BootData
     size_t mapSize;
     size_t descriptorSize;
     size_t magic;
+    uint64_t kernelPhys, kernelPages;
+    struct Module
+    {
+        char moduleName[16];
+        size_t address, pages;
+    } modules[10];
 };
 void __attribute__((constructor)) test()
 {
@@ -61,6 +68,18 @@ extern "C" void kernel_main(BootData* data)
     Logger::getInstance()->log("Hello from kernel function!\n");
     Scheduler::schedule(new Thread("otherFunction", otherFunction));
     Logger::getInstance()->log("Hello from kernel main\n");
+    Vector<Module*> modules;
+    modules.add(new Module("KERNEL", data->kernelPhys, data->kernelPages));
+    for (size_t i = 0; i < 10; i++)
+    {
+        if (data->modules[i].moduleName[0])
+        {
+            Logger::getInstance()->log("%s at 0x%x, %d\n", data->modules[i].moduleName, data->modules[i].address,
+                data[i].modules->pages);
+            modules.add(new Module(data->modules[i].moduleName, data->modules[i].address, data->modules[i].pages));
+        }
+    }
+    ModuleLoader::instance = ModuleLoader(modules);
     for (;;);
 }
 void otherFunction()

@@ -23,6 +23,29 @@ extern "C" int memcmp(const void* a, const void* b, size_t len)
     }
     return 0;
 }
+extern "C" int strcmp(const char* a, const char* b)
+{
+    int flag = 0;
+    size_t i = 0;
+    while (a[i] && b[i])
+    {
+        if (flag = (((const char*)a)[i] - ((const char*)b)[i]))
+        {
+            return flag;
+        }
+        i++;
+    }
+    return a[i] - b[i];
+}
+extern "C" size_t strlen(const char* str)
+{
+    size_t len = 0;
+    while (str[len])
+    {
+        len++;
+    }
+    return len;
+}
 extern "C" void memset(void* dest, int val, size_t len)
 {
     for (size_t i = 0; i < len; i++)

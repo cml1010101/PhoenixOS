@@ -14,6 +14,12 @@ typedef struct
     size_t mapSize;
     size_t descriptorSize;
     size_t magic;
+    uint64_t kernelPhys, kernelPages;
+    struct Module
+    {
+        char moduleName[16];
+        size_t address, pages;
+    } modules[10];
 } BootData;
 typedef void(*KERNEL_MAIN)(BootData*);
 void __panic(EFI_STATUS code, int line)
@@ -52,6 +58,8 @@ UINT64 getFileSize(EFI_FILE_HANDLE file)
 }
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 {
+    BootData data;
+    memset(&data, 0, sizeof(data));
     EFI_STATUS status;
     InitializeLib(ImageHandle, SystemTable);
     Print(L"Welcome to the Smart OS.\n");
@@ -61,6 +69,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     EFI_FILE_HANDLE volume = getVolume(ImageHandle);
     Print(L"Loading kernel.\n");
     CHAR16* kernelPath = L"KERNEL.ELF";
+    CHAR16* modulesPath = L"MODULES.CFG";
     EFI_FILE_HANDLE kernelHandle;
     status = uefi_call_wrapper(volume->Open, 5, volume, &kernelHandle,
         kernelPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY, EFI_FILE_HIDDEN, EFI_FILE_SYSTEM);
@@ -102,8 +111,81 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
         }
     }
     KERNEL_MAIN kernelMain = (KERNEL_MAIN)kernelHeader->e_entry;
+    kernelPages = (kernelSize + 0xFFF) / 0x1000;
+    size_t kernelPhys;
+    status = uefi_call_wrapper(BS->AllocatePages, 4, AllocateAnyPages, EfiLoaderCode,
+        kernelPhys, &kernelPhys);
+    if (status) PANIC(status);
+    memcpy((void*)kernelPhys, kernelBuffer, kernelSize);
+    data.kernelPages = kernelPages;
+    data.kernelPhys = kernelPhys;
     FreePool(kernelBuffer);
-    Print(L"Loading ACPI table.\n");
+    EFI_FILE_HANDLE modulesHandle;
+    status = uefi_call_wrapper(volume->Open, 5, volume, &modulesHandle,
+        modulesPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY, EFI_FILE_HIDDEN, EFI_FILE_SYSTEM);
+    if (status && status != EFI_NOT_FOUND) PANIC(status);
+    if (status != EFI_NOT_FOUND)
+    {
+        UINT64 modulesSize = getFileSize(modulesHandle);
+        void* modulesBuffer = AllocatePool(modulesSize);
+        status = uefi_call_wrapper(modulesHandle->Read, 3, modulesHandle, &modulesSize, modulesBuffer);
+        if (status) PANIC(status);
+        status = uefi_call_wrapper(modulesHandle->Close, 1, modulesHandle);
+        if (status) PANIC(status);
+        char* modulesPtr = (char*)modulesBuffer;
+        Print(L"Path: %s\n", modulesPath);
+        CHAR16 currentModulePath[20];
+        currentModulePath[0] = 0;
+        size_t i = 0, j = 0;
+        while (i < modulesSize)
+        {
+            if (modulesPtr[i] == '\n')
+            {
+                EFI_FILE_HANDLE currentModuleHandle;
+                status = uefi_call_wrapper(volume->Open, 5, volume, &currentModuleHandle,
+                    currentModulePath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY, EFI_FILE_HIDDEN, EFI_FILE_SYSTEM);
+                if (status) PANIC(status);
+                Print(L"Path: %s\n", currentModulePath);
+                UINT64 currentModuleSize = getFileSize(currentModuleHandle);
+                void* currentModuleBuffer = AllocatePool(currentModuleSize);
+                Print(L"Here\n");
+                status = uefi_call_wrapper(currentModuleHandle->Read, 3, currentModuleHandle, &currentModuleSize, currentModuleBuffer);
+                if (status) PANIC(status);
+                Print(L"Here\n");
+                status = uefi_call_wrapper(currentModuleHandle->Close, 1, currentModuleHandle);
+                if (status) PANIC(status);
+                Print(L"Here\n");
+                size_t currentModulePages = (currentModuleSize + 0xFFF) / 0x1000;
+                Print(L"Pages: %d\n", currentModulePages);
+                size_t currentModuleAddress;
+                status = uefi_call_wrapper(BS->AllocatePages, 4, AllocateAnyPages, EfiLoaderCode,
+                    currentModulePages, &currentModuleAddress);
+                if (status) PANIC(status);
+                memcpy((void*)currentModuleAddress, currentModuleBuffer, currentModuleSize);
+                FreePool(currentModuleBuffer);
+                i++;
+                data.modules[j].address = currentModuleAddress;
+                data.modules[j].pages = currentModulePages;
+                size_t k = 0;
+                while (currentModulePath[k])
+                {
+                    data.modules[j].moduleName[k] = currentModulePath[k];
+                    k++;
+                }
+                data.modules[j].moduleName[k] = 0;
+                currentModulePath[0] = 0;
+                j++;
+            }
+            else
+            {
+                CHAR16 newChar[2];
+                newChar[0] = modulesPtr[i++];
+                newChar[1] = 0;
+                StrCat(currentModulePath, newChar);
+            }
+        }
+    }
+    // Print(L"Loading ACPI table.\n");
     void* acpi;
     EFI_GUID acpiGuid = ACPI_20_TABLE_GUID;
     for (size_t i = 0; i < SystemTable->NumberOfTableEntries; i++)
@@ -139,7 +221,6 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     map = LibMemoryMap(&numEntries, &mapKey, &descriptorSize, &descriptorVersion);
     memoryMapSize = descriptorSize * numEntries;
     Print(L"Entering kernel: 0x%x.\n", kernelMain);
-    BootData data;
     data.gop = gop;
     data.acpi = acpi;
     data.memoryMap = map;

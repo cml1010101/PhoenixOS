@@ -40,6 +40,7 @@ public:
     void free(void* ptr);
     void check();
     void clean();
+    void print(Logger* logger);
     static void initialize();
 };
 #endif
