@@ -54,10 +54,37 @@ IOAPIC::IOAPIC(uint32_t* address)
     VirtualMemoryManager::getKernelVirtualMemoryManager()->mapPage((uint64_t)(this->registers =
        (uint32_t*)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocateAddress(1)), (uint64_t)address,
         VMM_PRESENT | VMM_READ_WRITE | VMM_CACHE_DISABLE);
+    auto madt = XSDT::getInstance()->find("APIC");
+    size_t k = 0;
+    uint8_t* data = (uint8_t*)&madt[1];
+    data = (uint8_t*)(&data[8]);
+    memset(overrides, 0, sizeof(overrides));
+    for (size_t i = 0; i < madt->length - sizeof(ACPIHeader); i += data[i + 1])
+    {
+        switch (data[i])
+        {
+        case 2:
+            Logger::getInstance()->log("Found iso: %d to %d\n", data[i + 3], *(uint32_t*)&data[i + 4]);
+            InterruptSourceOverride iso;
+            iso.present = true;
+            iso.src = data[i + 3];
+            iso.dest = (uint8_t)*(uint32_t*)&data[i + 4];
+            overrides[k++] = iso;
+            break;
+        }
+    }
 }
 void IOAPIC::setRedirection(size_t number, uint64_t destination, uint64_t vector)
 {
     Logger::getInstance()->log("Mapping global %d to %d\n", number, vector);
+    for (size_t i = 0; i < 20; i++)
+    {
+        if (overrides[i].present && number == overrides[i].src)
+        {
+            number = overrides[i].dest;
+            break;
+        }
+    }
     writeRegister(number * 2 + 0x10, vector);
     writeRegister(number * 2 + 0x11, destination << 24);
 }
@@ -90,6 +117,7 @@ void LAPICTimer::start()
     lapic->writeRegister(0x3E0, 3);
     lapic->writeRegister(0x380, (uint32_t)count);
     CPU::getInstance()->getCurrentCore().setInterruptHandler(254, [](CPURegisters* regs) {
+        Logger::getInstance()->log("APIC Timer called\n");
         auto timer = CPU::getInstance()->getCurrentCore().getLAPIC().getTimer();
         timer->incrementCount();
         if (timer->getInterruptHandler()) timer->getInterruptHandler()(regs);

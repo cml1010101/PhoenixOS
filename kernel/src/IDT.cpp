@@ -83,7 +83,7 @@ IDT::IDT(bool unused)
 {
     CPU::getInstance()->getCurrentCore().getVirtualMemoryManager()->mapPage(
         (uint64_t)(entries = (IDTEntry*)CPU::getInstance()->getCurrentCore().getVirtualMemoryManager()->allocateAddress(1)),
-        PhysicalMemoryManager::instance.allocatePage(),
+        PhysicalMemoryManager::instance.allocatePage() << 12,
         VMM_PRESENT | VMM_READ_WRITE
     );
     entries[0] = IDTEntry((uint64_t)isr0, 0x8, 0b1110, 0, 0);
@@ -140,7 +140,8 @@ IDT::IDT(bool unused)
 void IDT::load()
 {
     SystemPointer address;
-    address.base = (uint64_t)CPU::getInstance()->getCurrentCore().getVirtualMemoryManager()->getPhysicalAddress(entries);
+    address.base = (uint64_t)entries;
     address.limit = (256 * sizeof(IDTEntry)) - 1;
+    Logger::getInstance()->log("IDT Virt: 0x%x\nIDT Phys: 0x%x\n", entries, address.base);
     load_idt(&address);
 }

@@ -33,6 +33,7 @@ void callGlobalConstructors()
         constructors[i]();
     }
 }
+void otherFunction();
 extern "C" void kernel_main(BootData* data)
 {
     callGlobalConstructors();
@@ -57,5 +58,12 @@ extern "C" void kernel_main(BootData* data)
     asm volatile ("sti");
     CPU::getInstance()->initializeScheduling();
     Logger::getInstance()->log("Scheduling!!!\n");
+    Logger::getInstance()->log("Hello from kernel function!\n");
+    Scheduler::schedule(new Thread("otherFunction", otherFunction));
+    Logger::getInstance()->log("Hello from kernel main\n");
     for (;;);
+}
+void otherFunction()
+{
+    Logger::getInstance()->log("Hello from other function!\n");
 }

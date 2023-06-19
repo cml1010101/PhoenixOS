@@ -27,7 +27,6 @@ void* Heap::allocate(size_t length)
     HeapEntry* entry = heapStart;
     while (entry)
     {
-        Logger::getInstance()->log("Entry: 0x%x\n", entry);
         if (entry->magic != HEAP_MAGIC)
         {
             Logger::getInstance()->panic("Corrupted heap\n");
@@ -129,7 +128,7 @@ void Heap::clean()
         {
             Logger::getInstance()->panic("Corrupted Heap");
         }
-        if (previous == NULL && !entry->free)
+        if (previous == NULL || !entry->free)
         {
             previous = entry;
             entry = entry->next;
@@ -165,8 +164,10 @@ void Heap::clean()
                 newEntry->magic = HEAP_MAGIC;
                 newEntry->next = next;
                 newEntry->size = newSize;
+                previous->next = newEntry;
             }
         }
+        entry = entry->next;
     }
 }
 extern "C" void* malloc(size_t size)

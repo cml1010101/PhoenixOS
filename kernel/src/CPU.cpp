@@ -101,6 +101,7 @@ void CPU::Core::initializeLAPIC(LAPIC lapic)
 }
 void CPU::Core::handleInterrupt(CPURegisters* regs)
 {
+    // Logger::getInstance()->log("INT %d\n", regs->num);
     if (CPU::getInstance()->supportsAPIC()) lapic.sendEOI();
     else if (regs->num > 31 && regs->num < 48) PIC::sendEOI(regs->num);
     if (handlers[regs->num]) handlers[regs->num](regs);
@@ -211,12 +212,6 @@ void CPU::start()
                 Logger::getInstance()->log("Found IOAPIC: 0x%x\n", *(uint32_t*)(&data[i + 4]));
                 ioapicAddress = *(uint32_t*)(&data[i + 4]);
                 break;
-            case 2:
-                Logger::getInstance()->log("Found iso: %d to %d\n", data[i + 3], *(uint32_t*)&data[i + 4]);
-                break;
-            case 5:
-                Logger::getInstance()->log("Uh oh!\n");
-                break;
             }
         }
         apic = IOAPIC((uint32_t*)ioapicAddress);
@@ -294,16 +289,12 @@ void CPU::initializeScheduling()
     if (supportsAPIC())
     {
         Timer* clockTimer;
-        Timer* interruptTimer = getCore(0).getLAPIC().getTimer();
-        clockTimer = interruptTimer;
-        Logger::getInstance()->log("Got interrupt timer: 0x%x\n", clockTimer);
-        clockTimer->start();
-        Logger::getInstance()->log("Started interrupt timer\n");
-        *cores[0].getScheduler() = Scheduler(interruptTimer, clockTimer, true);
+        Timer* interruptTimer = clockTimer = PIT::getInstance();
+        new (cores[0].getScheduler()) Scheduler(interruptTimer, clockTimer, true);
         for (size_t i = 1; i < numCores; i++)
         {
             interruptTimer = getCore(i).getLAPIC().getTimer();
-            *cores[i].getScheduler() = Scheduler(interruptTimer, clockTimer, true);
+            new (cores[i].getScheduler()) Scheduler(interruptTimer, clockTimer, true);
         }
     }
     else

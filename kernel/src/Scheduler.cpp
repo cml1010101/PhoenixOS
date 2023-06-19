@@ -9,6 +9,7 @@ extern "C" void _kill()
 int nextThreadIdx = 0;
 Thread::Thread(const char* name, void(*entryPoint)(), uint8_t ring)
 {
+    Logger::getInstance()->log("Creating thread '%s' that enters at 0x%x at ring %d\n", name, entryPoint, ring);
     this->ringLevel = ring;
     this->asleep = false;
     this->active = false;
@@ -25,10 +26,13 @@ Thread::Thread(const char* name, void(*entryPoint)(), uint8_t ring)
         = CPU::getInstance()->getSegment(ring, false);
     asm volatile ("pushfq; pop %0": "=r"(registers.rflags));
     this->registers.rflags |= ring << 12;
-    this->vmm = VirtualMemoryManager::getKernelVirtualMemoryManager()->clone();
+    Logger::getInstance()->log("About to clone virtual memory manager\n");
+    this->vmm = ringLevel > 0 ? VirtualMemoryManager::getKernelVirtualMemoryManager()->clone()
+        : VirtualMemoryManager::getKernelVirtualMemoryManager();
     this->registers.rsp = (uint64_t)vmm->allocate(16, (ringLevel > 0) ? (VMM_PRESENT | VMM_READ_WRITE | VMM_USER)
         : (VMM_PRESENT | VMM_READ_WRITE)) - 8;
     *(uint64_t*)registers.rsp = (uint64_t)_kill;
+    Logger::getInstance()->log("Created thread '%s'\n", name);
 }
 Scheduler::Scheduler(Timer* interruptTimer, Timer* clockTimer, bool kernel)
 {
@@ -37,7 +41,13 @@ Scheduler::Scheduler(Timer* interruptTimer, Timer* clockTimer, bool kernel)
     this->numActiveThreads = 0;
     this->clockTimer = clockTimer;
     if (kernel)
+    {
+        Logger::getInstance()->log("Creating kernel thread\n");
         scheduleLocal(kernelThread = new Thread("kernel", (Runnable)&&finish));
+        Logger::getInstance()->log("Scheduled kernel thread\n");
+        Logger::getInstance()->log("&kernelThread = 0x%x\n", kernelThread);
+        activeThread = kernelThread;
+    }
     interruptTimer->setInterruptHandler([](CPURegisters* regs) {
         CPU::getInstance()->getCurrentCore().getScheduler()->yield(regs);
     });

@@ -57,6 +57,13 @@ class IOAPIC
 {
 private:
     volatile uint32_t* registers;
+    struct __attribute__((packed)) InterruptSourceOverride
+    {
+        bool present;
+        uint8_t src;
+        uint8_t dest;
+    };
+    InterruptSourceOverride overrides[20];
     inline void writeRegister(uint32_t reg, uint32_t val)
     {
         registers[0] = reg;

@@ -59,7 +59,7 @@ VirtualMemoryManager::VirtualMemoryManager(bool kernel)
     allocationTablePhys[3].size = 32;
     allocationTablePhys[4].address = (uint64_t)&_cpu_init_start;
     allocationTablePhys[4].size = ((uint64_t)&_cpu_init_end - (uint64_t)&_cpu_init_start + 0xFFF) / 0x1000;
-    PhysicalMemoryManager::instance.setPages(rsp >> 12, 1, 32);
+    PhysicalMemoryManager::instance.setPages((rsp >> 12) - 16, 1, 48);
     allocationTablePhys[1].address = (uint64_t)&_kernel_start;
     allocationTablePhys[1].size = ((uint64_t)&_kernel_end - (uint64_t)&_kernel_start) / 0x1000;
     allocationTablePhys[255].address = PhysicalMemoryManager::instance.allocatePage() << 12;
@@ -70,7 +70,7 @@ VirtualMemoryManager::VirtualMemoryManager(bool kernel)
     map((uint64_t)&_kernel_start, (uint64_t)&_kernel_start, VMM_READ_WRITE | VMM_PRESENT, allocationTablePhys[1].size);
     map((uint64_t)&_cpu_init_start, (uint64_t)&_cpu_init_start, VMM_READ_WRITE | VMM_PRESENT, allocationTablePhys[4].size);
     Logger::getInstance()->log("Mapping old stack\n");
-    map(rsp, rsp, VMM_PRESENT | VMM_READ_WRITE, 32);
+    map((rsp & VMM_ADDR) - 0x10000, (rsp & VMM_ADDR) - 0x10000, VMM_PRESENT | VMM_READ_WRITE, 48);
 }
 void VirtualMemoryManager::mapPage(uint64_t virt, uint64_t phys, uint64_t flags)
 {
@@ -244,8 +244,9 @@ VirtualMemoryManager* VirtualMemoryManager::clone()
     memoryManager->useVirtualAddresses = true;
     memoryManager->remap = true;
     memoryManager->pml4Virt = (uint64_t*)allocateAddress(2);
-    memoryManager->pml4Phys = (uint64_t*)PhysicalMemoryManager::instance.allocatePages(2);
+    memoryManager->pml4Phys = (uint64_t*)(PhysicalMemoryManager::instance.allocatePages(2) << 12);
     map((uint64_t)memoryManager->pml4Virt, (uint64_t)memoryManager->pml4Phys, VMM_PRESENT | VMM_READ_WRITE, 2);
+    Logger::getInstance()->log("Memsetting pml4 to 0, 0x%x(0x%x)\n", memoryManager->pml4Virt, memoryManager->pml4Phys);
     memset(memoryManager->pml4Virt, 0, 0x2000);
     VirtualAddressAllocation* allocationTable = allocationTableVirt;
     VirtualAddressAllocation* newAllocationTable =
@@ -258,7 +259,7 @@ VirtualMemoryManager* VirtualMemoryManager::clone()
         }
         if (allocationTable[255].address)
         {
-            uint64_t phys = PhysicalMemoryManager::instance.allocatePage();
+            uint64_t phys = PhysicalMemoryManager::instance.allocatePage() << 12;
             uint64_t virt = allocateAddress(1);
             mapPage(virt, phys, VMM_PRESENT | VMM_READ_WRITE);
             newAllocationTable[255].address = virt;
@@ -267,14 +268,17 @@ VirtualMemoryManager* VirtualMemoryManager::clone()
         }
         else break;
     }
+    Logger::getInstance()->log("Copying page table contents\n");
     for (size_t i = 0; i < 512; i++)
     {
         if (pml4Virt[i] & 1 && !(memoryManager->pml4Virt[i] & 1))
         {
+            Logger::getInstance()->log("Copying PDPT\n");
             uint64_t* pdptVirt = (uint64_t*)pml4Virt[i + 512];
-            uint64_t newPdptPhys = PhysicalMemoryManager::instance.allocatePages(2);
+            uint64_t newPdptPhys = PhysicalMemoryManager::instance.allocatePages(2) << 12;
             uint64_t* newPdptVirt = (uint64_t*)allocateAddress(2, 0xA00000000);
             map((uint64_t)newPdptVirt, newPdptPhys, VMM_PRESENT | VMM_READ_WRITE, 2);
+            Logger::getInstance()->log("Mapped new PDPT\n");
             memset(newPdptVirt, 0, 0x2000);
             memoryManager->pml4Virt[i] = newPdptPhys | VMM_PRESENT | VMM_READ_WRITE;
             memoryManager->pml4Phys[i + 512] = (uint64_t)newPdptVirt;
@@ -282,8 +286,9 @@ VirtualMemoryManager* VirtualMemoryManager::clone()
             {
                 if (pdptVirt[j] & 1 && !(newPdptVirt[j] & 1))
                 {
+                    Logger::getInstance()->log("Copying PD\n");
                     uint64_t* pdVirt = (uint64_t*)pdptVirt[i + 512];
-                    uint64_t newPdPhys = PhysicalMemoryManager::instance.allocatePages(2);
+                    uint64_t newPdPhys = PhysicalMemoryManager::instance.allocatePages(2) << 12;
                     uint64_t* newPdVirt = (uint64_t*)allocateAddress(2, 0xA00000000);
                     map((uint64_t)newPdVirt, newPdPhys, VMM_PRESENT | VMM_READ_WRITE, 2);
                     memset(newPdVirt, 0, 0x2000);
@@ -291,8 +296,9 @@ VirtualMemoryManager* VirtualMemoryManager::clone()
                     newPdptVirt[j + 512] = (uint64_t)newPdVirt;
                     for (size_t k = 0; k < 512; k++)
                     {
+                        Logger::getInstance()->log("Copying PT\n");
                         uint64_t* ptVirt = (uint64_t*)pdVirt[i + 512];
-                        uint64_t newPtPhys = PhysicalMemoryManager::instance.allocatePage();
+                        uint64_t newPtPhys = PhysicalMemoryManager::instance.allocatePage() << 12;
                         uint64_t* newPtVirt = (uint64_t*)allocateAddress(1, 0xA00000000);
                         map((uint64_t)newPdVirt, newPdPhys, VMM_PRESENT | VMM_READ_WRITE, 1);
                         memcpy(newPtVirt, ptVirt, 0x1000);
