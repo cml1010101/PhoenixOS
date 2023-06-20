@@ -23,4 +23,4 @@ kernel.elf: ${CPP_OBJS} ${C_OBJS} ${ASM_OBJS} ${CRT0_OBJ} ${CRTBEGIN_OBJ} ${CRTE
 %.s.o: %.s
 	x86_64-elf-as -c $< -o $@
 clean:
-	rm -rf kernel.elf ${CPP_OBJS} ${C_OBJS} ${ASM_OBJS}
+	rm -rf kernel.elf kernel.a ${CPP_OBJS} ${C_OBJS} ${ASM_OBJS}

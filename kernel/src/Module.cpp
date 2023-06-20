@@ -29,41 +29,42 @@ void Module::start()
     Thread* moduleInit = new Thread(name, (Runnable)getSymbol("module_init"));
     Scheduler::schedule(moduleInit);
 }
+uint64_t Module::getSymbolValue(size_t table, size_t idx)
+{
+    if (table == SHN_UNDEF || idx == SHN_UNDEF) return 0;
+    Elf64_Ehdr* ehdr = (Elf64_Ehdr*)virtAddress;
+    Elf64_Shdr* shdr = (Elf64_Shdr*)(virtAddress + ehdr->e_shoff);
+    Elf64_Sym* sym = (Elf64_Sym*)(virtAddress + shdr[table].sh_offset);
+    Elf64_Sym* symbol = &sym[idx];
+    if (symbol->st_shndx == SHN_UNDEF)
+    {
+        Elf64_Shdr* strtab = &shdr[shdr[table].sh_link];
+        const char* name = (const char*)(virtAddress + strtab->sh_offset + symbol->st_name);
+        uint64_t target = ModuleLoader::instance.getSymbol(name);
+        if (target == 0)
+        {
+            if (ELF64_ST_BIND(symbol->st_info) & STB_WEAK)
+            {
+                return 0;
+            }
+            return -1;
+        }
+        return target;
+    }
+    else if (symbol->st_shndx == SHN_ABS)
+    {
+        return symbol->st_value;
+    }
+    Elf64_Shdr* target = &shdr[symbol->st_shndx];
+    return virtAddress + symbol->st_value + target->sh_offset;
+}
 void Module::load(bool loadProg)
 {
-    Logger::getInstance()->log("Parsing %s\n", name);
     Elf64_Ehdr* ehdr = (Elf64_Ehdr*)virtAddress;
-    Logger::getInstance()->log("Ehdr->? = %s\n", ehdr->e_ident);
     Elf64_Shdr* shdr = (Elf64_Shdr*)(virtAddress + ehdr->e_shoff);
-    Logger::getInstance()->log("&shdr = 0x%x, &ehdr = 0x%x\n", shdr, ehdr);
-    Elf64_Shdr* symtab;
     size_t shStrIdx = ehdr->e_shstrndx;
     Elf64_Shdr* shstrtab = &shdr[shStrIdx];
     Elf64_Shdr* strtab;
-    for (size_t i = 0; i < ehdr->e_shnum; i++)
-    {
-        if (strcmp(".strtab", (char*)(virtAddress + shstrtab->sh_offset + shdr[i].sh_name)) == 0)
-        {
-            strtab = &shdr[i];
-        }
-    }
-    str = (char*)(virtAddress + strtab->sh_offset);
-    for (size_t j = 0; j < ehdr->e_shnum; j++)
-    {
-        if (shdr[j].sh_type == SHT_SYMTAB)
-        {
-            symtab = &shdr[j];
-            sym = (Elf64_Sym*)(virtAddress + symtab->sh_offset);
-            for (size_t i = 0; i < symtab->sh_size / symtab->sh_entsize; i++)
-            {
-                if (strcmp(&str[sym[i].st_name], "") == 0) continue;
-                Symbol symbol;
-                symbol.name = &str[sym[i].st_name];
-                symbol.value = sym[i].st_value;
-                symbols.add(symbol);
-            }
-        }
-    }
     if (loadProg)
     {
         Logger::getInstance()->log("Loading %s into memory\n", name);
@@ -78,39 +79,89 @@ void Module::load(bool loadProg)
                     (const void*)(virtAddress + shdr[i].sh_offset), shdr[i].sh_size);
                 memset((void*)(shdr[i].sh_addr + shdr[i].sh_size), 0,
                     pages * 0x1000 - shdr[i].sh_size);
+                shdr[i].sh_offset = shdr[i].sh_addr - virtAddress;
+                Logger::getInstance()->log("Copied program into memory: %s at 0x%x\n",
+                    (char*)(virtAddress + shstrtab->sh_offset + shdr[i].sh_name), shdr[i].sh_addr);
+            }
+            else if (shdr[i].sh_type == SHT_NOBITS)
+            {
+                if (!shdr[i].sh_size) continue;
+                if (shdr[i].sh_flags & SHF_ALLOC)
+                {
+                    uint64_t pages = (shdr[i].sh_size + 0xFFF) / 0x1000;
+                    shdr[i].sh_addr = (uint64_t)VirtualMemoryManager::getKernelVirtualMemoryManager()->allocate(pages,
+                        VMM_PRESENT | VMM_READ_WRITE);
+                    memset((void*)shdr[i].sh_addr, 0,
+                        pages * 0x1000);
+                    shdr[i].sh_offset = shdr[i].sh_addr - virtAddress;
+                }
+            }
+        }
+        Logger::getInstance()->log("Performing relocation\n");
+        Elf64_Shdr* reltab = NULL;
+        for (size_t i = 0; i < ehdr->e_shnum; i++)
+        {
+            if (shdr[i].sh_type == SHT_RELA)
+            {
+                reltab = &shdr[i];
+                Elf64_Rela* relocations = (Elf64_Rela*)(virtAddress + reltab->sh_offset);
+                Logger::getInstance()->log("Found rela: %s\n", (char*)(virtAddress + shstrtab->sh_offset + shdr[i].sh_name));
+                for (size_t j = 0; j < reltab->sh_size / sizeof(Elf64_Rela); j++)
+                {
+                    Elf64_Shdr* target = &shdr[reltab->sh_info];
+                    size_t addr = virtAddress + target->sh_offset;
+                    size_t ref = (size_t)(addr + relocations[j].r_offset);
+                    size_t symval = 0;
+                    if (ELF64_R_SYM(relocations[j].r_info) != SHN_UNDEF)
+                    {
+                        symval = getSymbolValue(reltab->sh_link, ELF64_R_SYM(relocations[j].r_info));
+                    }
+                    switch (ELF64_R_TYPE(relocations[j].r_info))
+                    {
+                    case R_X86_64_NONE:
+                        break;
+                    case R_X86_64_64:
+                        *(uint64_t*)ref = symval + *(uint64_t*)ref;
+                        break;
+                    case R_X86_64_PC64:
+                        *(uint64_t*)ref = symval + *(uint64_t*)ref - (uint64_t)ref;
+                        break;
+                    case R_X86_64_PC32:
+                        *(uint32_t*)ref = symval + *(uint32_t*)ref - (uint32_t)ref;
+                        break;
+                    case R_X86_64_32:
+                        *(uint32_t*)ref = symval + *(uint32_t*)ref;
+                        break;
+                    default:
+                        Logger::getInstance()->log("Unrelocatable symbol: 0x%x.\n", ELF64_R_TYPE(relocations[j].r_info));
+                        break;
+                    }
+                }
             }
         }
     }
-    Logger::getInstance()->log("Performing relocation\n");
-    Elf64_Shdr* reltab = NULL;
     for (size_t i = 0; i < ehdr->e_shnum; i++)
     {
-        if (shdr[i].sh_type == SHT_RELA)
+        if (strcmp(".strtab", (char*)(virtAddress + shstrtab->sh_offset + shdr[i].sh_name)) == 0)
         {
-            reltab = &shdr[i];
-            Elf64_Rela* relocations = (Elf64_Rela*)(virtAddress + reltab->sh_offset);
-            Logger::getInstance()->log("Found rela: %s\n", (char*)(virtAddress + shstrtab->sh_offset + shdr[i].sh_name));
-            for (size_t j = 0; j < reltab->sh_size / sizeof(Elf64_Rela); j++)
+            strtab = &shdr[i];
+        }
+    }
+    str = (char*)(virtAddress + strtab->sh_offset);
+    for (size_t j = 0; j < ehdr->e_shnum; j++)
+    {
+        if (shdr[j].sh_type == SHT_SYMTAB)
+        {
+            Elf64_Shdr* symtab = &shdr[j];
+            sym = (Elf64_Sym*)(virtAddress + symtab->sh_offset);
+            for (size_t i = 0; i < symtab->sh_size / symtab->sh_entsize; i++)
             {
-                Elf64_Sym* symbolEntry = &sym[ELF64_R_SYM(relocations[j].r_info)];
-                Elf64_Shdr* linkedShdr = &shdr[symbolEntry->st_shndx];
-                uint64_t* relocAddress = (uint64_t*)(shdr[symbolEntry->st_shndx].sh_addr + relocations[i].r_offset);
-                char* symbolName = &str[symbolEntry->st_name];
-                Logger::getInstance()->log("Symbol name %s\n", symbolName);
-                Logger::getInstance()->log("Relocation Addr 0x%x\n", relocAddress);
-                if (symbolEntry->st_shndx == 0)
-                {
-                    Logger::getInstance()->log("Searching for kernel symbol %s\n", symbolName);
-                    size_t symVal = ModuleLoader::instance.getSymbol(symbolName);
-                    if (symVal == -1) Logger::getInstance()->log("Couldn't find %s\n", symbolName);
-                    *relocAddress = symVal;
-                }
-                else
-                {
-                    Elf64_Shdr* section = &shdr[symbolEntry->st_shndx];
-                    uint64_t* relocAddress = (uint64_t*)(shdr[symbolEntry->st_shndx].sh_addr + relocations[i].r_offset);
-                    *relocAddress = section->sh_addr + symbolEntry->st_value + relocations[i].r_addend;
-                }
+                if (strcmp(&str[sym[i].st_name], "") == 0) continue;
+                Symbol symbol;
+                symbol.name = &str[sym[i].st_name];
+                symbol.value = getSymbolValue(j, i);
+                symbols.add(symbol);
+                Logger::getInstance()->log("Found symbol: %s\n", symbol.name);
             }
         }
     }

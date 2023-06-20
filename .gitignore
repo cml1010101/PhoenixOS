@@ -3,5 +3,6 @@
 *.so
 *.efi
 *.elf
+*.a
 *.img
 graphics.txt

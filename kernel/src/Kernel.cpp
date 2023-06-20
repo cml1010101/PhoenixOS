@@ -68,18 +68,18 @@ extern "C" void kernel_main(BootData* data)
     Logger::getInstance()->log("Hello from kernel function!\n");
     Scheduler::schedule(new Thread("otherFunction", otherFunction));
     Logger::getInstance()->log("Hello from kernel main\n");
-    Vector<Module*> modules;
-    modules.add(new Module("KERNEL", data->kernelPhys, data->kernelPages));
-    for (size_t i = 0; i < 10; i++)
-    {
-        if (data->modules[i].moduleName[0])
-        {
-            Logger::getInstance()->log("%s at 0x%x, %d\n", data->modules[i].moduleName, data->modules[i].address,
-                data[i].modules->pages);
-            modules.add(new Module(data->modules[i].moduleName, data->modules[i].address, data->modules[i].pages));
-        }
-    }
-    new (&ModuleLoader::instance) ModuleLoader(modules);
+    // Vector<Module*> modules;
+    // modules.add(new Module("KERNEL", data->kernelPhys, data->kernelPages));
+    // for (size_t i = 0; i < 10; i++)
+    // {
+    //     if (data->modules[i].moduleName[0])
+    //     {
+    //         Logger::getInstance()->log("%s at 0x%x, %d\n", data->modules[i].moduleName, data->modules[i].address,
+    //             data[i].modules->pages);
+    //         modules.add(new Module(data->modules[i].moduleName, data->modules[i].address, data->modules[i].pages));
+    //     }
+    // }
+    // new (&ModuleLoader::instance) ModuleLoader(modules);
     for (;;);
 }
 void otherFunction()

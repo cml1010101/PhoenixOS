@@ -112,13 +112,13 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     }
     KERNEL_MAIN kernelMain = (KERNEL_MAIN)kernelHeader->e_entry;
     kernelPages = (kernelSize + 0xFFF) / 0x1000;
-    size_t kernelPhys;
-    status = uefi_call_wrapper(BS->AllocatePages, 4, AllocateAnyPages, EfiLoaderCode,
-        kernelPhys, &kernelPhys);
-    if (status) PANIC(status);
-    memcpy((void*)kernelPhys, kernelBuffer, kernelSize);
-    data.kernelPages = kernelPages;
-    data.kernelPhys = kernelPhys;
+    // size_t kernelPhys;
+    // status = uefi_call_wrapper(BS->AllocatePages, 4, AllocateAnyPages, EfiLoaderCode,
+    //     kernelPhys, &kernelPhys);
+    // if (status) PANIC(status);
+    // memcpy((void*)kernelPhys, kernelBuffer, kernelSize);
+    // data.kernelPages = kernelPages;
+    // data.kernelPhys = kernelPhys;
     FreePool(kernelBuffer);
     EFI_FILE_HANDLE modulesHandle;
     status = uefi_call_wrapper(volume->Open, 5, volume, &modulesHandle,

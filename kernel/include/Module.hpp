@@ -20,6 +20,7 @@ private:
 public:
     Module() = default;
     Module(char* name, uint64_t physAddress, uint64_t pages);
+    uint64_t getSymbolValue(size_t table, size_t idx);
     size_t getSymbol(const char* name);
     void load(bool loadProg);
     void start();
