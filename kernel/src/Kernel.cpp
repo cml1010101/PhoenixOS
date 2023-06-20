@@ -8,6 +8,7 @@
 #include <QemuLogger.hpp>
 #include <XSDT.hpp>
 #include <Module.hpp>
+#include <Graphics.hpp>
 struct BootData
 {
     EFI_GRAPHICS_OUTPUT_PROTOCOL* gop;
@@ -43,6 +44,9 @@ void callGlobalConstructors()
 void otherFunction();
 extern "C" void kernel_main(BootData* data)
 {
+    size_t framebuffer = data->gop->Mode->FrameBufferBase;
+    size_t vertRes = data->gop->Mode->Info->VerticalResolution;
+    size_t horiRes = data->gop->Mode->Info->HorizontalResolution;
     callGlobalConstructors();
     QemuLogger logger = QemuLogger(0x3F8);
     logger.log("0x%x - 0x%x\n", (uint64_t)&__init_array_start, (uint64_t)&__init_array_end);
@@ -80,6 +84,7 @@ extern "C" void kernel_main(BootData* data)
     //     }
     // }
     // new (&ModuleLoader::instance) ModuleLoader(modules);
+    initializeGraphics(framebuffer, vertRes, horiRes);
     for (;;);
 }
 void otherFunction()
