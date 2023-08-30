@@ -214,7 +214,7 @@ void CPU::start()
                 break;
             }
         }
-        apic = IOAPIC((uint32_t*)ioapicAddress);
+        apic = IOAPIC((uint32_t*)(uintptr_t)ioapicAddress);
         PIC::disable();
         LAPIC::initialize();
         cores[0].initializeLAPIC(LAPIC());
@@ -226,8 +226,8 @@ void CPU::start()
             cpu_start_id = i;
             cpu_start_stack = stack;
             cpu_start_cr3 = cores[i].getVirtualMemoryManager()->getPhysicalAddress();
-            cores[0].getLAPIC().sendIPI(i, 0, 5 << 8, 0);
-            cores[0].getLAPIC().sendIPI(i, 0, 6 << 8, (uint64_t)&cpu_start_16 >> 12);
+            cores[0].getLAPIC().sendIPI(lapicIDs[i], 0, 5 << 8, 0);
+            cores[0].getLAPIC().sendIPI(lapicIDs[i], 0, 6 << 8, (uint64_t)&cpu_start_16 >> 12);
             while (!cores[i].isInitialized());
         }
     }

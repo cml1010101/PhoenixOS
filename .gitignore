@@ -1,8 +1,1 @@
-.vscode
-*.o
-*.so
-*.efi
-*.elf
-*.a
-*.img
-graphics.txt
+build

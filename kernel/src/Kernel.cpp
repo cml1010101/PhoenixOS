@@ -33,8 +33,8 @@ extern char __init_array_end;
 extern char start_ctors, end_ctors;
 void callGlobalConstructors()
 {
-    Runnable* constructors = (Runnable*)&start_ctors;
-    size_t numConstructors = ((uint64_t)&end_ctors - (uint64_t)&start_ctors) / sizeof(Runnable);
+    Runnable* constructors = (Runnable*)&__init_array_start;
+    size_t numConstructors = ((uint64_t)&__init_array_end - (uint64_t)&__init_array_start) / sizeof(Runnable);
     for (size_t i = 0; i < numConstructors; i++)
     {
         constructors[i]();

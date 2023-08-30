@@ -58,7 +58,7 @@ public:
         }
         inline void setInitialized(bool initialized)
         {
-            initialized = true;
+            this->initialized = initialized;
         }
     };
 private:

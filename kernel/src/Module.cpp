@@ -189,7 +189,7 @@ size_t ModuleLoader::getSymbol(const char* name)
     {
         Logger::getInstance()->log("Searching module %s\n", loadedModules[i]->getName());
         size_t val = loadedModules[i]->getSymbol(name);
-        if (val != -1) return val;
+        if (val != (size_t)-1) return val;
     }
     return -1;
 }

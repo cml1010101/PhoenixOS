@@ -81,6 +81,7 @@ IDTEntry::IDTEntry(uint64_t offset, uint16_t selector, uint8_t type, uint8_t dpl
 }
 IDT::IDT(bool unused)
 {
+    (void)unused;
     CPU::getInstance()->getCurrentCore().getVirtualMemoryManager()->mapPage(
         (uint64_t)(entries = (IDTEntry*)CPU::getInstance()->getCurrentCore().getVirtualMemoryManager()->allocateAddress(1)),
         PhysicalMemoryManager::instance.allocatePage() << 12,
