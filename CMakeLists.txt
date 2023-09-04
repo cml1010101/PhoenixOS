@@ -26,10 +26,9 @@ add_custom_target(
     COMMAND mmd -i /tmp/part.img ::/EFI/BOOT
     COMMAND mcopy -i /tmp/part.img ${CMAKE_BINARY_DIR}/boot/boot.efi ::/EFI/BOOT/BOOTX64.efi
     COMMAND mcopy -i /tmp/part.img ${CMAKE_BINARY_DIR}/kernel/kernel.elf ::KERNEL.ELF
-    COMMAND mcopy -i /tmp/part.img ${CMAKE_BINARY_DIR}/modules/modules.cfg ::MODULES.CFG
-    COMMAND mcopy -i /tmp/part.img ${CMAKE_BINARY_DIR}/modules/graphics/graphics.elf ::GRAPHICS.ELF
+    COMMAND mcopy -i /tmp/part.img ${CMAKE_BINARY_DIR}/modules/initramfs.tar ::initramfs.tar
     COMMAND dd if=/tmp/part.img of=disk.img bs=512 count=91669 seek=2048 conv=notrunc
-    DEPENDS boot kernel modules
+    DEPENDS boot kernel.elf initramfs
 )
 add_custom_target(
     run
