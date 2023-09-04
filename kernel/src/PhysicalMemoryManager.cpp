@@ -9,31 +9,30 @@ struct
 } blocks[128];
 extern char _kernel_start, _kernel_end, _cpu_init_start, _cpu_init_end;
 PhysicalMemoryManager PhysicalMemoryManager::instance;
-PhysicalMemoryManager::PhysicalMemoryManager(void* memoryMap, size_t memoryMapSize, size_t descriptorSize)
+PhysicalMemoryManager::PhysicalMemoryManager(swiftboot::MemoryMap map)
 {
-    Logger::getInstance()->log("Memory map is at 0x%x and has a size of %d with a descriptorSize of %d\n",
-        memoryMap, memoryMapSize, descriptorSize);
+    Logger::getInstance()->log("Memory map is at 0x%x with %d descriptors\n", map.descriptors, map.numDescriptors);
     memset(blocks, 0, sizeof(blocks));
     size_t k = 0;
-    for (size_t i = 0; i < memoryMapSize / descriptorSize; i++)
+    for (size_t i = 0; i < map.numDescriptors; i++)
     {
-        EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((char*)memoryMap + i * descriptorSize);
+        swiftboot::MemoryMapDescriptor* desc = &map.descriptors[i];
         if (k == 0)
         {
-            blocks[0].start = desc->PhysicalStart;
-            blocks[0].free = isUsable(desc->Type);
-            blocks[0].pages = desc->NumberOfPages;
+            blocks[0].start = desc->physicalAddress;
+            blocks[0].free = isUsable(desc->type);
+            blocks[0].pages = desc->numberOfPages;
         }
-        else if (blocks[k - 1].free == isUsable(desc->Type))
+        else if (blocks[k - 1].free == isUsable(desc->type))
         {
             k--;
-            blocks[k].pages += desc->NumberOfPages;
+            blocks[k].pages += desc->numberOfPages;
         }
         else
         {
-            blocks[k].start = desc->PhysicalStart;
-            blocks[k].free = isUsable(desc->Type);
-            blocks[k].pages = desc->NumberOfPages;
+            blocks[k].start = desc->physicalAddress;
+            blocks[k].free = isUsable(desc->type);
+            blocks[k].pages = desc->numberOfPages;
         }
         k++;
     }

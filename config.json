@@ -1,0 +1,16 @@
+{
+    "showMenu": true,
+    "defaultOption": "PhoenixOS",
+    "options": [
+        {
+            "name": "PhoenixOS",
+            "partition": "",
+            "kernelPath": "kernel.elf",
+            "initrdPath": "initramfs.tar",
+            "displayOptions": {
+                "width": 0,
+                "height": 0
+            }
+        }
+    ]
+}

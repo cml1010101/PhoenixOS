@@ -1,7 +1,7 @@
 set(modules_TARGETS
     "graphics"
 )
-foreach(TARGET IN LISTS ${modules_TARGETS})
+foreach(TARGET ${modules_TARGETS})
     add_subdirectory(${TARGET})
 endforeach()
 add_custom_command(

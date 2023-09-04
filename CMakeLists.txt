@@ -5,6 +5,8 @@ set(CMAKE_SHARED_LIBRARY_C_FLAGS "")
 set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "")
 set(CMAKE_SHARED_LIBRARY_ASM_FLAGS "")
 add_subdirectory(boot)
+file(COPY config.json DESTINATION ${CMAKE_BINARY_DIR})
+create_efi_partition(boot/SwiftBoot_x86_64.efi X64 efi_part 91669 config.json)
 add_subdirectory(kernel)
 add_subdirectory(modules)
 add_custom_command(
@@ -20,15 +22,10 @@ add_custom_target(disk ALL
 )
 add_custom_target(
     mount
-    COMMAND dd if=disk.img of=/tmp/part.img bs=512 count=91669 skip=2048 conv=notrunc
-    COMMAND mformat -i /tmp/part.img -h 32 -t 32 -n 64 -c 1
-    COMMAND mmd -i /tmp/part.img ::/EFI
-    COMMAND mmd -i /tmp/part.img ::/EFI/BOOT
-    COMMAND mcopy -i /tmp/part.img ${CMAKE_BINARY_DIR}/boot/boot.efi ::/EFI/BOOT/BOOTX64.efi
-    COMMAND mcopy -i /tmp/part.img ${CMAKE_BINARY_DIR}/kernel/kernel.elf ::KERNEL.ELF
-    COMMAND mcopy -i /tmp/part.img ${CMAKE_BINARY_DIR}/modules/initramfs.tar ::initramfs.tar
-    COMMAND dd if=/tmp/part.img of=disk.img bs=512 count=91669 seek=2048 conv=notrunc
-    DEPENDS boot kernel.elf initramfs
+    COMMAND mcopy -i efi_part.img ${CMAKE_BINARY_DIR}/kernel/kernel.elf ::KERNEL.ELF
+    COMMAND mcopy -i efi_part.img ${CMAKE_BINARY_DIR}/modules/initramfs.tar ::initramfs.tar
+    COMMAND dd if=efi_part.img of=disk.img bs=512 count=91669 seek=2048 conv=notrunc
+    DEPENDS boot kernel.elf initramfs efi_part
 )
 add_custom_target(
     run

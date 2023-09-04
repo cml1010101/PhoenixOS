@@ -1,8 +1,25 @@
 #ifndef PHYSICALMEMORYMANAGER_HPP
 #define PHYSICALMEMORYMANAGER_HPP
 #include <PhoenixOS.hpp>
-#include <efi.h>
-#include <efilib.h>
+#include <SwiftBoot.hpp>
+typedef enum
+{
+    EfiReservedMemoryType,
+    EfiLoaderCode,
+    EfiLoaderData,
+    EfiBootServicesCode,
+    EfiBootServicesData,
+    EfiRuntimeServicesCode,
+    EfiRuntimeServicesData,
+    EfiConventionalMemory,
+    EfiUnusableMemory,
+    EfiACPIReclaimMemory,
+    EfiACPIMemoryNVS,
+    EfiMemoryMappedIO,
+    EfiMemoryMappedIOPortSpace,
+    EfiPalCode,
+    EfiMaxMemoryType
+} EfiMemoryType;
 class PhysicalMemoryManager
 {
 private:
@@ -32,7 +49,7 @@ private:
 public:
     static PhysicalMemoryManager instance;
     PhysicalMemoryManager() = default;
-    PhysicalMemoryManager(void* memoryMap, size_t memoryMapSize, size_t descriptorSize);
+    PhysicalMemoryManager(swiftboot::MemoryMap map);
     inline uint64_t getPage(uint64_t idx)
     {
         return bitmap[idx / 64] & (1 << (idx % 64));
