@@ -55,6 +55,7 @@ finish:;
 }
 void Scheduler::reportISR(CPURegisters* regs)
 {
+    (void)regs;
     Logger::getInstance()->log("Unrecoverable error in thread %s. Terminating.\n", getActiveThread()->getName());
     getActiveThread()->terminated = true;
     asm volatile ("sti");

@@ -43,6 +43,7 @@ uint64_t VirtualMemoryManager::findFree(uint64_t pages, uint64_t minimumAdress)
 }
 VirtualMemoryManager::VirtualMemoryManager(bool kernel)
 {
+    (void)kernel;
     useVirtualAddresses = false;
     pml4Phys = (uint64_t*)(PhysicalMemoryManager::instance.allocatePages(2) << 12);
     allocationTablePhys = (VirtualAddressAllocation*)(PhysicalMemoryManager::instance.allocatePage() << 12);

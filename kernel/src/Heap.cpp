@@ -126,7 +126,7 @@ void Heap::print(Logger* logger)
     HeapEntry* entry = heapStart;
     while (entry)
     {
-        Logger::getInstance()->log("%d bytes at 0x%x: %s\n", entry->size, &entry[1], entry->free ? "Free" : "Taken");
+        logger->log("%d bytes at 0x%x: %s\n", entry->size, &entry[1], entry->free ? "Free" : "Taken");
         if (entry->magic != HEAP_MAGIC) break;
         entry = entry->next;
     }
@@ -163,5 +163,15 @@ void operator delete(void* ptr)
 }
 void operator delete[](void* ptr)
 {
+    Heap::getCurrentHeap()->free(ptr);
+}
+void operator delete(void* ptr, size_t size)
+{
+    (void)size;
+    Heap::getCurrentHeap()->free(ptr);
+}
+void operator delete[](void* ptr, size_t size)
+{
+    (void)size;
     Heap::getCurrentHeap()->free(ptr);
 }

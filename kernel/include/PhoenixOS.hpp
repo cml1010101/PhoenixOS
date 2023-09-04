@@ -70,8 +70,14 @@ class Logger
 protected:
     static Logger* instance;
 public:
-    virtual void log(const char* frmt, ...) {}
-    virtual void panic(const char* frmt, ...) {}
+    virtual void log(const char* frmt, ...)
+    {
+        (void)frmt;
+    }
+    virtual void panic(const char* frmt, ...)
+    {
+        (void)frmt;
+    }
     inline static Logger* getInstance()
     {
         return instance;

@@ -33,8 +33,8 @@ extern char __init_array_end;
 extern char start_ctors, end_ctors;
 void callGlobalConstructors()
 {
-    Runnable* constructors = (Runnable*)&start_ctors;
-    size_t numConstructors = ((uint64_t)&end_ctors - (uint64_t)&start_ctors) / sizeof(Runnable);
+    Runnable* constructors = (Runnable*)&__init_array_start;
+    size_t numConstructors = ((uint64_t)&__init_array_end - (uint64_t)&__init_array_start) / sizeof(Runnable);
     for (size_t i = 0; i < numConstructors; i++)
     {
         constructors[i]();
@@ -49,9 +49,13 @@ extern "C" void kernel_main(BootData* data)
     logger.log("Magic: 0x%x\n", data->magic);
     Logger::setInstance(&logger);
     XSDT::loadXSDT((XSDP*)data->acpi);
+    logger.log("Initializing Physical Memory Manager\n");
     PhysicalMemoryManager::instance = PhysicalMemoryManager(data->memoryMap, data->mapSize, data->descriptorSize);
+    logger.log("Initializing Virtual Memory Manager\n");
     VirtualMemoryManager::initialize();
+    logger.log("Initializing CPU\n");
     CPU::initialize();
+    logger.log("Initializing Heap\n");
     Heap::initialize();
     int* dat = new int[5];
     Logger::getInstance()->log("new int[5] = 0x%x\n", dat);

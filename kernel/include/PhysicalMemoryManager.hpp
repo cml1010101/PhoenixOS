@@ -71,14 +71,14 @@ public:
     inline uint64_t allocatePage()
     {
         uint64_t idx = findFirstFreePages(1);
-        if (idx == -1) return -1;
+        if (idx == (size_t)-1) return -1;
         setPage(idx, 1);
         return idx;
     }
     inline uint64_t allocatePages(size_t num)
     {
         uint64_t idx = findFirstFreePages(num);
-        if (idx == -1) return -1;
+        if (idx == (size_t)-1) return -1;
         setPages(idx, 1, num);
         return idx;
     }

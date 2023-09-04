@@ -16,7 +16,7 @@ extern "C" int memcmp(const void* a, const void* b, size_t len)
     int flag = 0;
     for (size_t i = 0; i < len; i++)
     {
-        if (flag = (((const char*)a)[i] - ((const char*)b)[i]))
+        if ((flag = (((const char*)a)[i] - ((const char*)b)[i])))
         {
             return flag;
         }
@@ -29,7 +29,7 @@ extern "C" int strcmp(const char* a, const char* b)
     size_t i = 0;
     while (a[i] && b[i])
     {
-        if (flag = (((const char*)a)[i] - ((const char*)b)[i]))
+        if ((flag = (((const char*)a)[i] - ((const char*)b)[i])))
         {
             return flag;
         }

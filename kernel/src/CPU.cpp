@@ -173,18 +173,25 @@ void CPU::start()
 {
     numCores = 1;
     VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
+    Logger::getInstance()->log("Setting virtual memory manager\n");
     cores[0].setVirtualMemoryManager(VirtualMemoryManager::getKernelVirtualMemoryManager());
     VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
+    Logger::getInstance()->log("Resetting cr0\n");
     cores[0].resetMMU();
     VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
+    Logger::getInstance()->log("Initializing gdt\n");
     cores[0].initializeGDT();
     VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
+    Logger::getInstance()->log("Resetting gdt\n");
     cores[0].resetGDT();
     VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
+    Logger::getInstance()->log("Initializing idt\n");
     cores[0].initializeIDT();
     VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
+    Logger::getInstance()->log("Resetting idt\n");
     cores[0].resetIDT();
     VirtualMemoryManager::getKernelVirtualMemoryManager()->checkMagic();
+    Logger::getInstance()->log("Starting pit\n");
     pit.setFrequency(1e5);
     pit.start();
     uint32_t lapicIDs[32];
@@ -214,7 +221,7 @@ void CPU::start()
                 break;
             }
         }
-        apic = IOAPIC((uint32_t*)ioapicAddress);
+        apic = IOAPIC((uint32_t*)(uintptr_t)ioapicAddress);
         PIC::disable();
         LAPIC::initialize();
         cores[0].initializeLAPIC(LAPIC());
@@ -226,8 +233,8 @@ void CPU::start()
             cpu_start_id = i;
             cpu_start_stack = stack;
             cpu_start_cr3 = cores[i].getVirtualMemoryManager()->getPhysicalAddress();
-            cores[0].getLAPIC().sendIPI(i, 0, 5 << 8, 0);
-            cores[0].getLAPIC().sendIPI(i, 0, 6 << 8, (uint64_t)&cpu_start_16 >> 12);
+            cores[0].getLAPIC().sendIPI(lapicIDs[i], 0, 5 << 8, 0);
+            cores[0].getLAPIC().sendIPI(lapicIDs[i], 0, 6 << 8, (uint64_t)&cpu_start_16 >> 12);
             while (!cores[i].isInitialized());
         }
     }

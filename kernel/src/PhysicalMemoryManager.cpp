@@ -17,7 +17,7 @@ PhysicalMemoryManager::PhysicalMemoryManager(void* memoryMap, size_t memoryMapSi
     size_t k = 0;
     for (size_t i = 0; i < memoryMapSize / descriptorSize; i++)
     {
-        EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)(memoryMap + i * descriptorSize);
+        EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((char*)memoryMap + i * descriptorSize);
         if (k == 0)
         {
             blocks[0].start = desc->PhysicalStart;
@@ -69,7 +69,7 @@ PhysicalMemoryManager::PhysicalMemoryManager(void* memoryMap, size_t memoryMapSi
     setPages(cpuInit, 1, cpuPages);
     uint64_t kernelInit = ((uint64_t)&_kernel_start) >> 12;
     uint64_t kernelPages = (((uint64_t)&_kernel_end) >> 12) - (((uint64_t)&_kernel_start) >> 12);
-    setPages(cpuInit, 1, cpuPages);
+    setPages(kernelInit, 1, kernelPages);
     setPage(0, 1);
     numTotalPages = maxPages;
 }
